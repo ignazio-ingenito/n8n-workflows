@@ -1,0 +1,979 @@
+{
+  "updatedAt": "2026-02-03T21:23:01.762Z",
+  "createdAt": "2025-12-15T10:37:01.311Z",
+  "id": "CJNi8yLNmWmByYQp",
+  "name": "CAP Docs mirroring",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "folder",
+        "operation": "list",
+        "path": "id:O_9JVgfSn70AAAAAAAAI1g",
+        "returnAll": true,
+        "filters": {
+          "include_deleted": true,
+          "recursive": true
+        }
+      },
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -224
+      ],
+      "id": "31d8d73e-5422-4678-8d8e-a5b9bd9be4a5",
+      "name": "List a folder",
+      "alwaysOutputData": true,
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "lyP31RBFPEJRlY2H",
+          "name": "Dropbox CAP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "FpdECdgoM38gPoS4",
+          "mode": "list",
+          "cachedResultName": "cap-docs",
+          "cachedResultUrl": "/projects/18sXDLbR6Pr24pIY/datatables/FpdECdgoM38gPoS4"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -528
+      ],
+      "id": "9398fb63-cbd4-44ef-b6d8-2366a85124f8",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "path",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        -576
+      ],
+      "id": "5af8ca2c-723c-4284-8fe8-c9e343d68371",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -608,
+        -368
+      ],
+      "id": "ab4f56f2-783f-4ec3-9201-80c9e120a8b2",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "segr.tecnico@clubaviazionepopolare.org",
+        "subject": "Aggiornamento files",
+        "message": "=<div style=\"font-family: 'Segoe UI', Tahoma, sans-serif; color: #333333; padding: 20px;\">\n  <p style=\"font-size: 15px;\">Buongiorno,<br>di seguito l'elenco dei i file aggiornati dall'ultima scansione:</p>\n\n  <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\">\n    <thead>\n      <tr style=\"text-align: left; color: #f0f0f0; background-color: #03a1fc; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;\">\n        <th style=\"padding: 12px 8px; border-top: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee; font-weight: bold;\">Documento</th>\n        <th style=\"padding: 12px 8px; border-top: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee; font-weight: bold;\">Ultima Modifica</th>\n        <th style=\"padding: 12px 8px; border-top: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee; font-weight: bold; text-align: right;\">Dimensione</th>\n      </tr>\n    </thead>\n    <tbody>\n      {{ $('Merge1').all().map(row => `\n        <tr>\n          <td style=\"padding: 15px 8px; border-bottom: 1px solid #f0f0f0;\">\n            <strong style=\"font-size: 14px; ${row.json.lastModifiedServer ? \"color: #2c3e50;\" : \"color: grey; text-decoration: line-through\" }\">${row.json.name}</strong><br>\n            <span style=\"font-size: 11px; color: #606363;\">${row.json.pathDisplay}</span>\n          </td>\n          <td style=\"padding: 15px 8px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #555555; white-space: nowrap;\">\n            ${row.json.lastModifiedServer ? row.json.lastModifiedServer.replace('T', ' ').substring(0, 16) : `<span style=\"color:red; font-style: italic\">Eliminato</span>`}\n          </td>\n          <td style=\"padding: 15px 8px; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #555555; text-align: right; white-space: nowrap;\">\n            ${row.json.contentSize}\n          </td>\n        </tr>\n      `).join('') }}\n    </tbody>\n  </table>\n</div>",
+        "options": {
+          "appendAttribution": false,
+          "bccList": "ignazio.ingenito@gmail.com",
+          "ccList": "presidente@clubaviazionepopolare.org"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2352,
+        -640
+      ],
+      "id": "c480164e-10c0-4587-9b57-e942e6cba2a6",
+      "name": "Send a message",
+      "webhookId": "f5578583-970b-4484-b6c9-d7ca3c82ff66",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gphebVm5FwOJmwGp",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "60a72c70-cf24-4e50-beaa-6e3ea5732a53",
+              "leftValue": "={{ $json.lastDropBoxUpdateMillis }}",
+              "rightValue": "={{ $json.lastExecutionMillis }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "bfcb43ae-38f4-4410-b7bd-1221cd950177",
+              "leftValue": "={{ $json.lastExecutionMillis }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        -576
+      ],
+      "id": "2475b582-7d3a-4eb0-9ad7-5c5c75a05c32",
+      "name": "CheckDate"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -576
+      ],
+      "id": "d8f63225-70e6-42d1-83f5-019d67c83c7b",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "FpdECdgoM38gPoS4",
+          "mode": "list",
+          "cachedResultName": "cap-docs",
+          "cachedResultUrl": "/projects/18sXDLbR6Pr24pIY/datatables/FpdECdgoM38gPoS4"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "keyValue": "={{ $json.key }}"
+            },
+            {
+              "keyName": "key",
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "lastExecution",
+              "displayName": "lastExecution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "dryRun": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        -464
+      ],
+      "id": "1489da60-b7bb-4744-9385-470809e958de",
+      "name": "Upsert row(s)"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        -576
+      ],
+      "id": "c112144e-54da-458b-9d78-1f4a70399be4",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "74880d4f-ed74-479a-a04b-4c9cd836202b",
+              "name": "contentSize",
+              "value": "={{ \n  $json.contentSize == null\n  ? \"-\"\n  : `${Math.round($json.contentSize / 1024 * 10) / 10}KB`\n}}",
+              "type": "string"
+            },
+            {
+              "id": "3cdc35b0-0b08-4639-973e-9313e529481a",
+              "name": "lastDropBoxUpdateMillis",
+              "value": "={{ DateTime.fromISO($json.lastModifiedServer).toMillis() | 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "d4a346d9-c0ea-4db1-bc8c-73c51c3b0672",
+              "name": "lastExecutionMillis",
+              "value": "={{ DateTime.fromISO($json.lastExecution).toMillis() | 0 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": "=*",
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        -576
+      ],
+      "id": "df711c9c-b461-4952-acc1-1feefa06ca78",
+      "name": "Get lastExecution"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "78c55868-f907-4ec1-b8c8-a6b045d3021d",
+              "name": "key",
+              "value": "={{ $json.pathDisplay }}",
+              "type": "string"
+            },
+            {
+              "id": "41eeea56-628d-4af3-9418-b0b9b7ee4dfc",
+              "name": "lastExecution",
+              "value": "={{ DateTime.local() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2352,
+        -464
+      ],
+      "id": "746ef152-d824-4f4c-b009-199b4c3149d3",
+      "name": "Set lastExecution"
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        -576
+      ],
+      "id": "52ef80f0-81f2-49e5-ac81-e21a9c9f94c9",
+      "name": "Limit",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "download",
+        "path": "={{ $json.pathDisplay }}"
+      },
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        -272
+      ],
+      "id": "cfdbc402-d2c2-4082-906b-b12c2a1db6aa",
+      "name": "Download a file",
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "lyP31RBFPEJRlY2H",
+          "name": "Dropbox CAP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "path": "=/www.clubaviazionepopolare.org/moduli/.upload/{{ $binary.data.fileName }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.ftp",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        -272
+      ],
+      "id": "ef20e64a-b5ac-43af-8300-d45605721efa",
+      "name": "upload",
+      "credentials": {
+        "ftp": {
+          "id": "Cg66XTW8lFfPZLra",
+          "name": "FTP CAP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "rename",
+        "oldPath": "=/www.clubaviazionepopolare.org/moduli/.upload/{{ $data.name }}",
+        "newPath": "=/www.clubaviazionepopolare.org/moduli{{ $binary.data.directory.replace(\"CartellaPerPortale/\", \"ist/\") }}/{{ $binary.data.fileName }}",
+        "options": {
+          "createDirectories": true
+        }
+      },
+      "type": "n8n-nodes-base.ftp",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        -272
+      ],
+      "id": "4b8597ae-35b3-4a26-86c4-30b9d924e1a7",
+      "name": "move to folder",
+      "alwaysOutputData": true,
+      "credentials": {
+        "ftp": {
+          "id": "Cg66XTW8lFfPZLra",
+          "name": "FTP CAP"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1840,
+        -352
+      ],
+      "id": "f4d3f48e-756b-4d37-904a-264f2926f6f7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "24de2316-0189-4ee1-afc5-27f623b53908",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "=deleted",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        -144
+      ],
+      "id": "c5315c1d-851a-4aea-916d-ec47f37093e3",
+      "name": "Check for Deleted",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "24de2316-0189-4ee1-afc5-27f623b53908",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "=file",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        -336
+      ],
+      "id": "8a11c6b8-7c48-47d9-82e7-9e0d20ccb5d7",
+      "name": "Check For Files",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "path": "=/www.clubaviazionepopolare.org/moduli{{ $json.pathDisplay }}",
+        "options": {
+          "folder": true
+        }
+      },
+      "type": "n8n-nodes-base.ftp",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -144
+      ],
+      "id": "b296e05b-0cae-4733-a9c3-33bd566737fc",
+      "name": "Delete",
+      "credentials": {
+        "ftp": {
+          "id": "Cg66XTW8lFfPZLra",
+          "name": "FTP CAP"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "FpdECdgoM38gPoS4",
+          "mode": "list",
+          "cachedResultName": "cap-docs",
+          "cachedResultUrl": "/projects/18sXDLbR6Pr24pIY/datatables/FpdECdgoM38gPoS4"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "key",
+              "condition": "isEmpty"
+            }
+          ]
+        },
+        "options": {
+          "dryRun": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        0
+      ],
+      "id": "f5adbe57-acd7-497c-a69f-673448ad3cc3",
+      "name": "Delete deleted files",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2160,
+        -464
+      ],
+      "id": "af3adf1b-fd96-4cb5-bba9-66c74d583a2e",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b7fc2025-dd40-41b9-9741-319a38ea688e",
+              "name": "path",
+              "value": "={{ $json.pathDisplay }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -336
+      ],
+      "id": "d3635803-7050-4bf0-b696-53cf4645f624",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3465d7a0-4183-49f0-819f-af180ffa97ca",
+              "name": "path",
+              "value": "={{ $json.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "except",
+        "excludeFields": "id, key",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -528
+      ],
+      "id": "7f2ccc81-41b8-4b42-91d9-2c1391ab09e3",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c33cd3b6-1f4a-4b56-a1d4-cbc6d6d08364",
+              "leftValue": "={{ $json.path }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        -576
+      ],
+      "id": "79a0a04a-1a39-4957-8c5d-25cfa350a04e",
+      "name": "Filter"
+    }
+  ],
+  "connections": {
+    "List a folder": {
+      "main": [
+        [
+          {
+            "node": "Check For Files",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Deleted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List a folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CheckDate": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert row(s)": {
+      "main": [
+        []
+      ]
+    },
+    "Get lastExecution": {
+      "main": [
+        [
+          {
+            "node": "CheckDate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set lastExecution": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download a file": {
+      "main": [
+        [
+          {
+            "node": "upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload": {
+      "main": [
+        [
+          {
+            "node": "move to folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Download a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "move to folder": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check For Files": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Deleted": {
+      "main": [
+        [
+          {
+            "node": "Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete": {
+      "main": [
+        [
+          {
+            "node": "Delete deleted files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Set lastExecution",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete deleted files": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get lastExecution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "6e9b1710-1a88-4faa-a73c-f96ecb97d3b9",
+  "activeVersionId": null,
+  "versionCounter": 45,
+  "triggerCount": 1,
+  "tags": [
+    {
+      "updatedAt": "2026-02-03T21:23:00.284Z",
+      "createdAt": "2026-02-03T21:23:00.284Z",
+      "id": "VJFN9MxR7sW64MC3",
+      "name": "CAP"
+    }
+  ],
+  "shared": [
+    {
+      "updatedAt": "2026-02-03T20:55:51.947Z",
+      "createdAt": "2026-02-03T20:55:51.947Z",
+      "role": "workflow:owner",
+      "workflowId": "CJNi8yLNmWmByYQp",
+      "projectId": "UrQsb6WS05D3GpPl",
+      "project": {
+        "updatedAt": "2026-01-31T20:22:54.037Z",
+        "createdAt": "2026-01-31T20:07:57.352Z",
+        "id": "UrQsb6WS05D3GpPl",
+        "name": "Ignazio ignazio.ingenito@gmail.com <ignazio.ingenito@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "435ce580-3569-4489-8c16-791fef901ced"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

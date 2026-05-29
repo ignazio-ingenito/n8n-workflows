@@ -1,0 +1,26 @@
+.env
+.env.*
+!.env.example
+
+# Local tooling
+.DS_Store
+.idea/
+.vscode/
+
+# Node or temporary validation tooling
+node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+
+# Generated exports and scratch data
+exports/
+tmp/
+*.bak
+
+# n8n sensitive local files
+.n8n/
+credentials*.json
+credentials/*.json
+!credentials/*.enc.json
+!credentials/.gitkeep
+*decrypted*

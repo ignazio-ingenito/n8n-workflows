@@ -1,0 +1,504 @@
+{
+  "updatedAt": "2026-05-25T14:22:06.185Z",
+  "createdAt": "2025-10-28T18:48:07.347Z",
+  "id": "a9nRtISy40yUqySP",
+  "name": "I-WANT - email to log",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "has:attachment is:unread",
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        224
+      ],
+      "id": "843a0f18-ad1e-47cf-aead-a821fecbb964",
+      "name": "Scan new emails",
+      "notesInFlow": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rdCk8bn7TJkGYbsU",
+          "name": "rv7.iwant@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -656,
+        224
+      ],
+      "id": "6a7f9769-7406-4c55-bc2d-9d9964d35c30",
+      "name": "Get a message",
+      "webhookId": "6b0c324c-0ba3-4a95-bd26-cacc6c0cd7ca",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rdCk8bn7TJkGYbsU",
+          "name": "rv7.iwant@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudinary.com/v1_1/deegzgpvw/image/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "=httpBasicAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "={{ \"data:image/jpeg;base64,\" + $('Get a message').item.binary.attachment_0.data }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "n8n_iwant_flights"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -320,
+        32
+      ],
+      "id": "ffe7fd9c-4a8a-470b-a7be-8a3e61b887ea",
+      "name": "Upload to cloudinary.com1",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "lwSEMMBGPHqVNA4w",
+          "name": "cloudinary.com - Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ocr.space/parse/image",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "K87966141788957"
+            },
+            {
+              "name": "isOverlayRequired",
+              "value": "true"
+            },
+            {
+              "name": "language",
+              "value": "eng"
+            },
+            {
+              "name": "filetype",
+              "value": "jpeg"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.secure_url }}"
+            },
+            {
+              "name": "OCREngine",
+              "value": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -48,
+        32
+      ],
+      "id": "72bf21b3-7776-454d-8a04-c2d48b97ab41",
+      "name": "Get bounding box"
+    },
+    {
+      "parameters": {
+        "jsCode": "const overlay = $input.first().json.ParsedResults[0].TextOverlay.Lines\n\nconst top = overlay.find(line => \n  line.LineText.toLowerCase().includes(\"date\".toLowerCase())\n)\nconst bottom = overlay.find(line => \n  line.LineText.toLowerCase().includes(\"selector\".toLowerCase())\n)\n\nif (!top || !bottom) {\n  throw new Error(\"Could not find 'Date' or 'Distance'.\");\n}\n\nconst x = top.Words[0].Left - 25\nconst y = top.Words[0].Top - 25\nconst w = bottom.Words[0].Left + bottom.Words[0].Width - x\nconst h = bottom.Words[0].Top - y\n\nreturn {\n  json: {\n    crop: `c_crop,x_${x},y_${y},w_${w},h_${h}`\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        144
+      ],
+      "id": "d2c7437a-dc71-4d64-abfa-7a875c0cbe75",
+      "name": "Get boundings"
+    },
+    {
+      "parameters": {
+        "jsCode": "// https://res.cloudinary.com/deegzgpvw/image/upload/{ $('Get boundings').item.json.crop }/v{{ $('Upload to cloudinary.com1').item.json.version }}/{{ $('Upload to cloudinary.com1').item.json.public_id }}.{{ $('Upload to cloudinary.com1').item.json.format }}\n\nconst cropped_url = [\n  `https://res.cloudinary.com/deegzgpvw/image/upload`,\n  `${ $input.first().json.crop }`,\n  `v${$('Upload to cloudinary.com1').first().json.version}`,\n  `${$('Upload to cloudinary.com1').first().json.public_id}.${$('Upload to cloudinary.com1').first().json.format}`\n].join(\"/\")\n\nreturn {\n  json: {\n    url: $('Upload to cloudinary.com1').first().json.secure_url,\n    cropped_url\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        144
+      ],
+      "id": "b2f8e63a-289f-4344-9060-d00c16fda0fd",
+      "name": "Get cropped url"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1072,
+        144
+      ],
+      "id": "5d9a26d4-c189-41de-b417-447b6e4432c6",
+      "name": "Ask to AI",
+      "retryOnFail": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "o4kxmd3kYOZjz0UX",
+          "name": "Bearer Auth Open Router"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const models = {\n  llama3: \"meta-llama/llama-3.3-70b-instruct:free\",\n  llama4Maverick: \"meta-llama/llama-4-maverick:free\",\n  llama4Scout: \"meta-llama/llama-4-scout:free\"\n}\n\nreturn [{\n  body: {\n    model: models.llama3,\n    messages: [\n      {\n        role: \"user\",\n        content: [\n          { \n            type: \"text\", \n            text: [\n              \"```json\\n\",\n              JSON.stringify($input.first().json.ParsedResults),\n              \"```\",\n              \"\",\n              \"- Extract date, start, end, from, to, duration, distance from the above ocr scan json response.\",\n              \"- Convert dates/times to ISO 8601 UTC, duration to minutes.\",\n              \"- Return the json only with the requested field, no text, no explanation.\"\n            ].join(\"\\n\")\n          }\n        ]\n      }\n    ]\n  }\n,\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        144
+      ],
+      "id": "ea1a89a5-ea01-4f0d-a688-8821bc1fbe51",
+      "name": "AI prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $input.first().json.choices[0].message.content\n  .replace(\"```json\", \"\")\n  .replace(\"```\", \"\")\n\nreturn {\n  json: {\n    answer: JSON.parse(text)\n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        144
+      ],
+      "id": "a165f499-7c8c-4780-8c10-29ae1c78ebdf",
+      "name": "Parse resposnse"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ocr.space/parse/image",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "K87966141788957"
+            },
+            {
+              "name": "isOverlayRequired",
+              "value": "true"
+            },
+            {
+              "name": "language",
+              "value": "eng"
+            },
+            {
+              "name": "filetype",
+              "value": "jpeg"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.cropped_url }}"
+            },
+            {
+              "name": "OCREngine",
+              "value": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        624,
+        32
+      ],
+      "id": "e4709a9b-7ed2-47a0-a129-f19fa6d0bedc",
+      "name": "Parse bounding box"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Get a message').item.json.id }}",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n\n<head>\n    <meta content=\"text/html; charset=utf-8\" http-equiv=\"Content-Type\" />\n    <meta content=\"width=device-width, initial-scale=1.0\" name=\"viewport\" />\n    <style>\n        body,\n        table,\n        td,\n        a {\n            -webkit-text-size-adjust: 100%;\n            -ms-text-size-adjust: 100%;\n        }\n\n        table,\n        td {\n            mso-table-lspace: 0pt;\n            mso-table-rspace: 0pt;\n        }\n\n        img {\n            -ms-interpolation-mode: bicubic;\n        }\n\n        body {\n            margin: 0;\n            padding: 0;\n        }\n    </style>\n    <style>\n        body {\n            min-height: max(884px, 100dvh);\n        }\n    </style>\n</head>\n\n<body class=\"dark-mode-bg-dark\" style=\"font-family: 'Open Sans', sans-serif; margin: 0; padding: 0;\">\n    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n        <tbody>\n            <tr>\n                <td align=\"center\" style=\"padding: 16px;\">\n                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 448px;\" width=\"100%\">\n                        <tbody>\n                            <tr>\n                                <td class=\"dark-mode-text-light\"\n                                    style=\"font-size: 16px; line-height: 24px; color: #334155;\">\n                                    <p style=\"margin: 0 0 24px 0;\">Ciao {{ ({\n                                        'ignazio.ingenito@gmail.com': 'Ignazio',\n                                        'giovanni.lumia@gpceccarelli.com': 'Giovanni',\n                                        'andreamodenesi@gmail.com': 'Andrea'\n                                        })[$('Get a message').item.json.from.value[0].address]}}, <br />\n                                        ti confermo l'inserimento del seguente volo:\n                                    </p>\n                                </td>\n                            </tr>\n                            <tr>\n                                <td align=\"center\" class=\"dark-mode-bg-card dark-mode-border\"\n                                    style=\"background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;\">\n                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n                                        <tbody>\n                                            <tr>\n                                                <td style=\"padding-bottom: 24px;\">\n                                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n                                                        <tbody>\n                                                            <tr>\n                                                                <td align=\"center\" width=\"30%\">\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 24px; font-weight: 700; color: #0f172a;\">\n                                                                        {{ $json.data.PartenzaLuogo }}</p>\n                                                                    <p style=\"margin: 0; font-size: 12px; color: #64748b;\">\n                                                                        {{ $json.data.PartenzaOra.toDateTime().format('hh:mm') }}\n                                                                    </p>\n                                                                </td>\n                                                                <td align=\"center\" style=\"padding: 0 8px;\"\n                                                                    valign=\"middle\">\n                                                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"\n                                                                        width=\"100%\">\n                                                                        <tbody>\n                                                                            <tr>\n                                                                                <td\n                                                                                    style=\"font-size: 16px; color: #94a3b8; vertical-align: center;\">\n                                                                                    <img width=\"24\" height=\"24\"\n                                                                                        src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAC5ElEQVRYR+2VTWgTYRCGZ74kYrC2oBf1oKIeFEVPgthD1VawIP4g9VIUSdIUChWS3Uatl5ys3WwSKQpa0x96ESyIRyGxKBQ8iCIFfwttqQge1KpFrSa742ywNZsmTZqkVKFzS3Zm3mffb75ZhEUOXGR9+D8A3JK6dWJ8/XB//0mt1I5ldcDpVeoQ4SgAHmCf1gJRVLfQiW7l3GQpIbIDyIFGfng9VYwIXlisWm1n+/nxUkHMOQMuOXCXhdiFlCD4wK4cigTlJ6WAmBPA4WtfiRoOIeJGMwNNIYl6hrhTLETOW+DwBncJ1B/zHNjSjoP4v4tdaktbMRA5AYzmDklpFogdmYWoT3ytcHV2NsYLAckLwGjM82DYfTwLxMNEwnas94rnc/pzt/uGTav4Uo2EezRddPWEpLepOXkD1Dd3lC9f9pPnATZkgiCg1whYG1HlMYc3tFNgooYQa1i4io/KbtRwznuhW6puhqQ30z2SAE1N18ri9h+VOuh7AXFL3BY/29fW+jFdqEFSd+tAjxjCksWJCSKWRFg1x3HEImrLQROAU1JPIVLfTBHBO03QkZ6A72l6I4cc8AqAYCHnnawheh4J+naYAIwfTlkZZAsrpx+wXb+Q4Awn3zp94dJqa9xWzXaxpXA4uRkLDAJoTb05MzPQ4Lm8nSxiiJcMv+DfYJCXDLatQL0UU2mY+1xl+023yTSELklReQakYsX+DJwxQwPsWExY9XvZ1rcJoM4TspdbEiNMuma+EOzUFNcNssUxHsNYJCjx/LB8jph1DZNfQYG3cxXyNOmc84zXYdQQ1cu+Dfb6/VO568wZGfeAU1IGeP/vz9Bs1BADnaJA1vtdYe+n+Qqm52cEcHjCm4RIvGKxSU4YIIQYadZod9gzUqxgXgBGkrtF2bxuxfdRv99vWL1gkfcqXiiCJYBZDrhk5cFC2W30jai+fan9MwAEci6PYgB5FZs0/z2AYt6ukNqlW7DoDvwGZkP8IWbsFysAAAAASUVORK5CYII=\" />\n                                                                                </td>\n                                                                                <td class=\"dark-mode-border\" width=\"100%\">\n                                                                                    <table height=\"100%\" width=\"100%\">\n                                                                                      <tr><td style=\"border-bottom: 1px dashed #cbd5e1;\"></td></tr>\n                                                                                      <tr><td></td></tr>\n                                                                                    </table>\n\n                                                                                </td>\n                                                                                <td\n                                                                                    style=\"font-size: 16px; color: #94a3b8; vertical-align: center;\">\n                                                                                    <img width=\"24\" height=\"24\"\n                                                                                        src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACoklEQVRYR+2VO2gUURSGz51NVAimWxEUYiBNEERQY5lgFPICOzuxmCWQIkWyM6OIxYrV7p01JIX4mDGL7VoIxkIsjGIEwUdlpUGihShITKIm4u4e//WVmX0wDyfGIlPssnvu/c83/7nnXEHr/Iig+dWkzJHgL4LE9YW5lnv5/LFiUA3n+sAACU1aEFB/ivB8QdDBnDRehIUIDKAmM+eEEGccCc9app76ZwAJPTNELC6sJuRZyzTaIgNQR8632WOjL+sJogRHEbvhjBcF75uUxtMwEFUlQAImprcs+AEVG05Xwqgj6Q4RUx45kzGRaZu6Hh3ALyUIpyF8yimcMNI7qaS8qUj23jK17YT2CApR24E/Kvwa9W1xi7JQk2ZRoA9dLrDotLPa/YgBCC9bOnA1c/KxywVNvsPvba5kzBetrDEUOQDOg7SyuuEGyDyD3XsrnJlfmNsVDzqYPEqAUcP0EZ+TTMqdpZIynR8bXVY1OYWN/ZVvK1j0XMlqt4O44Angtpm+ofIzoIqTELurE/E1nJkTawfgpcz0qbD1czyXSq14Lf0dD+aAD1VmHseoHsd4fuVjubuVyhsw6xMQGEBDHwZdkx+RmmuYn+P/m6zQlC31h/VmRN3LaHDwUmOhebFTMPcBswdt3x4WBqP1AwDkYjE2UT7ETh3ftyFGdCtc6RfEvfg+BKAtQYGw7xYm60AoAOem4eGJzcuNK91wBu6IPsRa/cDAiSXbNJr/GqAyGe6HdiqWYZQezIwu2N1Q+1zQEwy1/ZEDOAWPa7JpE5eOAALlEr1wacePONNXVrjblsbMmgJUuaPJPWjNjphCdy9LY7Yy7vsQ+qlxmDUbADVGcWY6jJV+9+CyQpesPpHfBV4guCNcOf8/AK83iDq+0QXr7sB3/zD3IWQHAYgAAAAASUVORK5CYII=\" />\n                                                                                </td>\n                                                                            </tr>\n                                                                        </tbody>\n                                                                    </table>\n                                                                </td>\n                                                                <td align=\"center\" width=\"30%\">\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 24px; font-weight: 700; color: #0f172a;\">\n                                                                        {{ $json.data.ArrivoLuogo }}</p>\n                                                                    <p class=\"dark-mode-text-muted\"\n                                                                        style=\"margin: 0; font-size: 12px; color: #64748b;\">\n                                                                        {{\n                                                                        $json.data.ArrivoOra.toDateTime().format('hh:mm')\n                                                                        }}</p>\n                                                                </td>\n                                                            </tr>\n                                                        </tbody>\n                                                    </table>\n                                                </td>\n                                            </tr>\n                                            <tr>\n                                                <td style=\"padding-bottom: 24px;\">\n                                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n                                                        <tbody>\n                                                            <tr>\n                                                                <td class=\"dark-mode-border\" height=\"1\"\n                                                                    style=\"background-color: #e2e8f0;\"></td>\n                                                            </tr>\n                                                        </tbody>\n                                                    </table>\n                                                </td>\n                                            </tr>\n                                            <tr>\n                                                <td style=\"padding-bottom: 24px;\">\n                                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n                                                        <tbody>\n                                                            <tr>\n                                                                <td style=\"padding-right: 8px;\" valign=\"top\" width=\"50%\">\n                                                                    <p class=\"dark-mode-text-muted\"\n                                                                        style=\"margin: 0 0 4px 0; font-size: 14px; color: #64748b;\">\n                                                                        Data</p>\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 16px; font-weight: 500; color: #0f172a;\">\n                                                                        {{\n                                                                        $json.data.Data.toDateTime().setLocale('it').format('dd-MMM-yyyy')\n                                                                        }}</p>\n                                                                </td>\n                                                                <td style=\"padding-left: 8px;\" valign=\"top\" width=\"50%\">\n                                                                    <p class=\"dark-mode-text-muted\"\n                                                                        style=\"margin: 0 0 4px 0; font-size: 14px; color: #64748b;\">\n                                                                        Durata</p>\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 16px; font-weight: 500; color: #0f172a;\">\n                                                                        {{ Math.floor($json.data.Durata / 60) }}h {{\n                                                                        $json.data.Durata % 60 }}min</p>\n                                                                </td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td colspan=\"2\" height=\"20\"></td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td style=\"padding-right: 8px;\" valign=\"top\" width=\"50%\">\n                                                                    <p class=\"dark-mode-text-muted\"\n                                                                        style=\"margin: 0 0 4px 0; font-size: 14px; color: #64748b;\">\n                                                                        Pilot in command</p>\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 16px; font-weight: 500; color: #0f172a;\">\n                                                                        {{ ({\n                                        'ignazio.ingenito@gmail.com': 'Ignazio',\n                                        'giovanni.lumia@gpceccarelli.com': 'Giovanni',\n                                        'andreamodenesi@gmail.com': 'Andrea'\n                                        })[$('Get a message').item.json.from.value[0].address]}}</p>\n                                                                </td>\n                                                                <td style=\"padding-left: 8px;\" valign=\"top\" width=\"50%\">\n                                                                    <p class=\"dark-mode-text-muted\"\n                                                                        style=\"margin: 0 0 4px 0; font-size: 14px; color: #64748b;\">\n                                                                        Landings</p>\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 16px; font-weight: 500; color: #0f172a;\">\n                                                                        {{ $json.data.Decolli }}</p>\n                                                                </td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td colspan=\"2\" height=\"20\"></td>\n                                                            </tr>\n                                                            <tr>\n                                                                <td colspan=\"2\" valign=\"top\">\n                                                                    <p class=\"dark-mode-text-muted\"\n                                                                        style=\"margin: 0 0 4px 0; font-size: 14px; color: #64748b;\">\n                                                                        Note</p>\n                                                                    <p class=\"dark-mode-text-main\"\n                                                                        style=\"margin: 0; font-size: 16px; font-weight: 500; color: #0f172a;\">\n                                                                        {{ $json.data.Note }}</p>\n                                                                </td>\n                                                            </tr>\n                                                        </tbody>\n                                                    </table>\n                                                </td>\n                                            </tr>\n                                            <tr>\n                                                <td style=\"padding-bottom: 24px;\">\n                                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n                                                        <tbody>\n                                                            <tr>\n                                                                <td class=\"dark-mode-border\" height=\"1\"\n                                                                    style=\"background-color: #e2e8f0;\"></td>\n                                                            </tr>\n                                                        </tbody>\n                                                    </table>\n                                                </td>\n                                            </tr>\n                                            <tr>\n                                                <td>\n                                                    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n                                                        <tbody>\n                                                            <tr>\n                                                                <td align=\"center\"\n                                                                    style=\"background-color: #3b82f6; border-radius: 4px;\">\n                                                                    <a href=\"#\"\n                                                                        style=\"display: block; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 12px; width: 100%; box-sizing: border-box;\"\n                                                                        target=\"_blank\">\n                                                                        <table border=\"0\" cellpadding=\"0\"\n                                                                            cellspacing=\"0\" width=\"100%\">\n                                                                            <tbody>\n                                                                                <tr>\n                                                                                    <td align=\"center\">\n                                                                                        <span style=\"font-size: 20px; vertical-align: middle; margin-right: 8px;\">\n                                                                                          <img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACgUlEQVRYR+2XT0gUURzHnZ31tkGS5sUugYesgx5CPSUdvERB0B8IoiARsUAI8SCCVHiSLv1bTCLoIrQRhJcOUXaQEtSLlgRCZ3ehRPagsTvT5y1vYJydmffG3mIHB5aZnfd9v9/nfd/vvX1r1e3zZe1z/jolgOu6PRIyb1nWdx1g+rShOyq09JmL66MEKJfLrghA0DfpdPqyDkCpVMqR+JLQ2rYdm+P/A2CktuM4fdzPM4AMIzkjR13gndYU0EdMQZN07jP3Iu9mU6nUNHfH72KVA1ieRTCgY/UeNM+YktsqgAKCxj0E1+lSAKBSnN4V5kCl6Gp1BYvyAODAgUgHWPNzFMw9E8XI0h5n/feE7YxxU/AagKuGAKaI08/nFzGP6C5DYwC42cLueoudcB4nPmgBJPnx+ReXajIFwPcy78Jyb0fNY/3z4OgFuFEAEjdj9Xvitke4ssQ0nANkQ2crTlQDJG8g+QKBWxVT8gOIbiB+G3WAQ8hbgl70JydR5QADWM7/Htgch5srsQB+karI0J4iyUpQFwUgdLQdB/inkRqg4MaI+SAJANohCvORKYBXBLweAbCNO7MhLk4BMGAK4CUJboYkeUGSPhx6QtuukxDfK22mAEYJOBFRKw9JNBwCMcL7yTAAcWi0KKxPCO4rCvALhbSD9iQ2r8Zoxym6GTTf0NTLImyl73oYgBCJU63OlQVyUAhZhu8IeCGm0yZth2X7DP2uiecqAEbTKdftMQ2CpwS6I3RyI5rn8YSi3xpudAG7FQogg9ncO/hkFMG+Emjb0wBxCPjHfL8R0W+a5HfpU/Talf+MNFyokkgXz3I/TbI/CJZJ/JHnxaC4JgBJoP8C1OVYMJPX0WMAAAAASUVORK5CYII=\" />\n                                                                                        </span>\n                                                                                        <span style=\"vertical-align: middle;\">\n                                                                                          <a style=\"color: white; text-decoration: none;\" href=\"https://flying.baialupo.com/iwant/index.php?/voli/details/{{ $json.id }}\">Dettagli del volo</span></a>\n                                                                                    </td>\n                                                                                </tr>\n                                                                            </tbody>\n                                                                        </table>\n                                                                    </a>\n                                                                </td>\n                                                            </tr>\n                                                        </tbody>\n                                                    </table>\n                                                </td>\n                                            </tr>\n                                        </tbody>\n                                    </table>\n                                </td>\n                            </tr>\n                            <tr>\n                                <td class=\"dark-mode-text-light\"\n                                    style=\"font-size: 16px; line-height: 24px; color: #334155; padding-top: 24px;\">\n                                    <p>\n                                        A presto,<br />\n                                        <span\n                                            style=\"color: #27272a; font-weight: bold; font-size: 1rem; font-style: italic;\">I-WANT</span>\n                                    </p>\n                                </td>\n                            </tr>\n                        </tbody>\n                    </table>\n                </td>\n            </tr>\n        </tbody>\n    </table>\n\n</body>\n\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1744,
+        144
+      ],
+      "id": "30b6dde9-8990-4b0a-82de-5d8c5ead76eb",
+      "name": "Reply to a message",
+      "webhookId": "525e90e0-f00e-42c1-94a9-9e3b6ec77794",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rdCk8bn7TJkGYbsU",
+          "name": "rv7.iwant@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://flying.baialupo.com/iwant/index.php?/json/voli/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"Data\": \"{{ $json.answer.date || Date.now().toISO() }}\",\n    \"PartenzaLuogo\": \"{{ $json.answer.from || \"Baialupo\" }}\",\n    \"PartenzaOra\": \"{{ $json.answer.start }}\",\n    \"ArrivoLuogo\": \"{{ $json.answer.to || \"Baialupo\" }}\",\n    \"ArrivoOra\": \"{{ $json.answer.end }}\",\n    \"Durata\": \"{{ $json.answer.duration }}\",\n    \"Matricola\": \"I-WANT\",\n    \"TipoVolo\": \"T\",\n    \"PIC\": \"{{ ({\n      'ignazio.ingenito@gmail.com': 1,\n      'giovanni.lumia@gpceccarelli.com': 139,\n      'andreamodenesi@gmail.com': 140\n    })[$('Get a message').item.json.from.value[0].address]}}\",\n    \"Dual\": null,\n    \"Note\": \"Distanza {{ $json.answer.distance }}NM\",\n    \"Decolli\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1504,
+        48
+      ],
+      "id": "c1a3bc41-bd0c-47b0-bbb4-6a8e9fec0294",
+      "name": "Add Flight",
+      "executeOnce": false,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "GMFOdTY7Rph5be3O",
+          "name": "Baialupo - Basic Auth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Scan new emails": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Upload to cloudinary.com1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to cloudinary.com1": {
+      "main": [
+        [
+          {
+            "node": "Get bounding box",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get bounding box": {
+      "main": [
+        [
+          {
+            "node": "Get boundings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get boundings": {
+      "main": [
+        [
+          {
+            "node": "Get cropped url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get cropped url": {
+      "main": [
+        [
+          {
+            "node": "Parse bounding box",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask to AI": {
+      "main": [
+        [
+          {
+            "node": "Parse resposnse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI prompt": {
+      "main": [
+        [
+          {
+            "node": "Ask to AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse bounding box": {
+      "main": [
+        [
+          {
+            "node": "AI prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse resposnse": {
+      "main": [
+        [
+          {
+            "node": "Add Flight",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Flight": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "node:Scan new emails": {
+      "Scan new emails": {
+        "lastTimeChecked": 1767031467,
+        "possibleDuplicates": [
+          "19b6b4870da519bc"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "b4688277-09fd-4bf2-90aa-af090de0f2bb",
+  "activeVersionId": null,
+  "versionCounter": 129,
+  "triggerCount": 1,
+  "tags": [
+    {
+      "updatedAt": "2026-02-03T21:23:32.059Z",
+      "createdAt": "2026-02-03T21:23:32.059Z",
+      "id": "ZksUzgF4oUf2ihkm",
+      "name": "I-WANT"
+    }
+  ],
+  "shared": [
+    {
+      "updatedAt": "2026-02-03T20:55:51.947Z",
+      "createdAt": "2026-02-03T20:55:51.947Z",
+      "role": "workflow:owner",
+      "workflowId": "a9nRtISy40yUqySP",
+      "projectId": "UrQsb6WS05D3GpPl",
+      "project": {
+        "updatedAt": "2026-01-31T20:22:54.037Z",
+        "createdAt": "2026-01-31T20:07:57.352Z",
+        "id": "UrQsb6WS05D3GpPl",
+        "name": "Ignazio ignazio.ingenito@gmail.com <ignazio.ingenito@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "435ce580-3569-4489-8c16-791fef901ced"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

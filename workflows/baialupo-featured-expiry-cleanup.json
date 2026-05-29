@@ -1,0 +1,321 @@
+{
+  "updatedAt": "2026-05-29T00:00:00.000Z",
+  "createdAt": "2026-05-29T00:00:00.000Z",
+  "id": "c5b8d7e6-80f2-4b7e-b0e4-5a8e6e0b9f77",
+  "name": "Baialupo Featured Expiry Cleanup",
+  "description": "Demote expired featured articles on baialupo.com.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 23
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -960,
+        -160
+      ],
+      "id": "5b2bca4f-dc57-4c76-8d69-6d0ce8df5a2a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const owner = 'ignazio-ingenito';\nconst repo = 'baialupo.com';\nconst branch = 'main';\nconst categories = ['news', 'guide', 'sicurezza', 'baialupo'];\n\nreturn categories.map((category) => ({\n  json: {\n    owner,\n    repo,\n    branch,\n    categoryPath: `src/content/posts/${category}`,\n  },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        -160
+      ],
+      "id": "a8f99f42-3db9-4a31-86e4-4f23eaf0c1b8",
+      "name": "Seed categories"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repo}}/contents/{{$json.categoryPath}}?ref={{$json.branch}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -448,
+        -160
+      ],
+      "id": "0b3c3a1b-3e50-4af0-a4e2-541fa7f14bbf",
+      "name": "List category folder",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const owner = 'ignazio-ingenito';\nconst repo = 'baialupo.com';\nconst branch = 'main';\n\nreturn $input.all().flatMap((item) => {\n  const entries = Array.isArray(item.json)\n    ? item.json\n    : Array.isArray(item.json.data)\n      ? item.json.data\n      : [];\n\n  return entries\n    .filter((entry) => entry.type === 'file' && entry.path.endsWith('.md'))\n    .map((entry) => ({\n      json: {\n        owner,\n        repo,\n        branch,\n        path: entry.path,\n      },\n    }));\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -160
+      ],
+      "id": "31e8d7c3-7d58-4f44-9b66-6a8f0ef20bd5",
+      "name": "Expand files"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repo}}/contents/{{$json.path}}?ref={{$json.branch}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        64,
+        -160
+      ],
+      "id": "1fc0e0b0-27f0-41a6-a4c7-94f6e5e3dbbb",
+      "name": "Fetch file content",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function rewriteFeatured(markdown, featuredValue) {\n  const match = markdown.match(/^---\\n([\\s\\S]*?)\\n---\\n?/);\n\n  if (!match) {\n    throw new Error('Missing YAML frontmatter');\n  }\n\n  const frontmatterLines = match[1].split('\\n');\n  let foundFeatured = false;\n\n  const rewrittenLines = frontmatterLines.map((line) => {\n    if (/^featured:\\s*/.test(line)) {\n      foundFeatured = true;\n      return `featured: ${featuredValue}`;\n    }\n\n    return line;\n  });\n\n  if (!foundFeatured) {\n    rewrittenLines.push(`featured: ${featuredValue}`);\n  }\n\n  return `---\\n${rewrittenLines.join('\\n')}\\n---\\n${markdown.slice(match[0].length)}`;\n}\n\nconst today = new Date().toISOString().slice(0, 10);\n\nreturn $input.all().flatMap((item) => {\n  const content = String(item.json.content ?? '');\n  const markdown = Buffer.from(content, 'base64').toString('utf8');\n  const match = markdown.match(/^---\\n([\\s\\S]*?)\\n---\\n?/);\n\n  if (!match) {\n    return [];\n  }\n\n  const lines = match[1].split('\\n');\n  const featuredLine = lines.find((line) => /^featured:\\s*/.test(line));\n  const expiresLine = lines.find((line) => /^expires:\\s*/.test(line));\n\n  const featured = featuredLine ? Number(featuredLine.split(':')[1].trim()) : 0;\n  const expires = expiresLine ? expiresLine.split(':').slice(1).join(':').trim().slice(0, 10) : null;\n\n  if (featured !== 1 || !expires || expires > today) {\n    return [];\n  }\n\n  const updatedMarkdown = rewriteFeatured(markdown, 0);\n\n  return [\n    {\n      json: {\n        owner: 'ignazio-ingenito',\n        repo: 'baialupo.com',\n        branch: 'main',\n        path: item.json.path,\n        sha: item.json.sha,\n        contentBase64: Buffer.from(updatedMarkdown).toString('base64'),\n        commitMessage: `chore(content): demote expired featured ${item.json.path}`,\n      },\n    },\n  ];\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -160
+      ],
+      "id": "d9b2f7fd-7cf5-46cf-b10d-1cf01ce8d10f",
+      "name": "Select expired featured"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repo}}/contents/{{$json.path}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"{{$json.commitMessage}}\",\n  \"content\": \"{{$json.contentBase64}}\",\n  \"branch\": \"{{$json.branch}}\",\n  \"sha\": \"{{$json.sha}}\"\n}",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        576,
+        -160
+      ],
+      "id": "f8d9f7f8-1e1c-4be4-8d4c-5d7fb8c7e0fd",
+      "name": "Commit expired featured",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 1,
+        "keep": "firstItems"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -160
+      ],
+      "id": "b4b9fb0e-f82a-45ad-8f6b-1f4c7d0ed7b2",
+      "name": "Keep first item"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/ignazio-ingenito/baialupo.com/actions/workflows/deploy.yaml/dispatches",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ref\": \"main\"\n}",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1088,
+        -160
+      ],
+      "id": "1b0c69cf-4ecb-4187-8c09-ec74284d5a4c",
+      "name": "Dispatch deploy",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Seed categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seed categories": {
+      "main": [
+        [
+          {
+            "node": "List category folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List category folder": {
+      "main": [
+        [
+          {
+            "node": "Expand files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand files": {
+      "main": [
+        [
+          {
+            "node": "Fetch file content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch file content": {
+      "main": [
+        [
+          {
+            "node": "Select expired featured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select expired featured": {
+      "main": [
+        [
+          {
+            "node": "Commit expired featured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commit expired featured": {
+      "main": [
+        [
+          {
+            "node": "Keep first item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep first item": {
+      "main": [
+        [
+          {
+            "node": "Dispatch deploy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "1b7f9f72-dcb9-4f0d-b1f8-9d1f1b4d91c8",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-29T00:00:00.000Z",
+      "createdAt": "2026-05-29T00:00:00.000Z",
+      "role": "workflow:owner",
+      "workflowId": "c5b8d7e6-80f2-4b7e-b0e4-5a8e6e0b9f77",
+      "projectId": "UrQsb6WS05D3GpPl",
+      "project": {
+        "updatedAt": "2026-01-31T20:22:54.037Z",
+        "createdAt": "2026-01-31T20:07:57.352Z",
+        "id": "UrQsb6WS05D3GpPl",
+        "name": "Ignazio ignazio.ingenito@gmail.com <ignazio.ingenito@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "435ce580-3569-4489-8c16-791fef901ced"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

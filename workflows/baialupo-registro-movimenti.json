@@ -1,0 +1,551 @@
+{
+  "updatedAt": "2026-05-10T16:44:38.755Z",
+  "createdAt": "2025-05-09T18:14:49.172Z",
+  "id": "BEXKWpCuMMV4iMad",
+  "name": "Baialupo Registro movimenti",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "088690d8-f2e8-41f1-b5cc-f57cb6176608",
+              "leftValue": "={{ $json.notifica }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -368,
+        -800
+      ],
+      "id": "95b91972-d225-4b02-945b-6df68db1637f",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 23
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -800,
+        -896
+      ],
+      "id": "8b657ea6-a4c2-4539-bb34-3b48b3cf8c76",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+          "mode": "list",
+          "cachedResultName": "Registro movimenti Aviosuperficie Baialupo (Risposte)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 32864457,
+          "mode": "list",
+          "cachedResultName": "Risposte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit#gid=32864457"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -592,
+        -896
+      ],
+      "id": "14d49bb9-3904-4664-be6e-13469dd78b4f",
+      "name": "Look for new flights",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "mH6y9buZCpHldL0O",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "69dcd95a-c351-4060-baf0-4085c750a59f",
+              "name": "notifica",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -144,
+        -704
+      ],
+      "id": "33d580ac-6500-4374-8701-c1d9c48fb0c1",
+      "name": "Set Notifica"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+          "mode": "list",
+          "cachedResultName": "Registro movimenti Aviosuperficie Baialupo (Risposte)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 32864457,
+          "mode": "list",
+          "cachedResultName": "Risposte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit#gid=32864457"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Informazioni cronologiche"
+          ],
+          "schema": [
+            {
+              "id": "Informazioni cronologiche",
+              "displayName": "Informazioni cronologiche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nominativo del pilota",
+              "displayName": "Nominativo del pilota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nominativo dell'eventuale passeggero",
+              "displayName": "Nominativo dell'eventuale passeggero",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo di aeromobile",
+              "displayName": "Tipo di aeromobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Marche dell'aeromobile",
+              "displayName": "Marche dell'aeromobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Persone a bordo",
+              "displayName": "Persone a bordo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo del volo",
+              "displayName": "Tipo del volo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Note",
+              "displayName": "Note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Partenza",
+              "displayName": "Partenza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Partenza - data / ora",
+              "displayName": "Partenza - data / ora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Arrivo",
+              "displayName": "Arrivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Arrivo - data / ora",
+              "displayName": "Arrivo - data / ora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "e-mail pilota",
+              "displayName": "e-mail pilota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notifica",
+              "displayName": "notifica",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        80,
+        -704
+      ],
+      "id": "4ed56b0c-5032-42b2-987d-70f753787d44",
+      "name": "Update",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "mH6y9buZCpHldL0O",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+          "mode": "list",
+          "cachedResultName": "Registro movimenti Aviosuperficie Baialupo (Risposte)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 32864457,
+          "mode": "list",
+          "cachedResultName": "Risposte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit#gid=32864457"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        304,
+        -704
+      ],
+      "id": "a501612d-a977-4bc4-8b1b-4cee99bc1e14",
+      "name": "Get All",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "mH6y9buZCpHldL0O",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['e-mail pilota'] }}",
+        "subject": "=Registrazione movimento {{ $json['Marche dell\\'aeromobile'] }}",
+        "message": "=<p style=\"font-family: system-ui\">\n    Ciao <i>{{ $json['Nominativo del pilota'] }}</i>,<br />\n    grazie per aver registrato il tuo movimento presso la nostra aviosuperficie!<br />\n    <br />\n    Come previsto dalle leggi vigenti, raccogliamo queste informazioni per tenere traccia degli arrivi e delle partenze\n    in modo corretto e trasparente.<br />\n    Ecco i dati che ci hai inviato:<br />\n</p>\n\n<table style=\"font-family: system-ui; margin-top: 1.5rem; border-collapse: collapse;\">\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Pilota:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json['Nominativo del pilota'] }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Passeggero:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json['Nominativo dell\\'eventuale passeggero'] }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Tipo di aeromobile:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json['Tipo di aeromobile'] }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Marche:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json['Marche dell\\'aeromobile'] }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Persone a bordo:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json['Persone a bordo'] }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Tipo di volo:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json['Tipo del volo'] }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Note:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json.Note }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Partenza:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json.Partenza }} - {{ $json['Partenza - data / ora'].replaceAll(\"/\", \"-\").slice(0, -3) }}</td>\n    </tr>\n    <tr>\n        <td style=\"border-bottom: solid white 1px; font-weight: bold; color: white; background-color: #0069c2; padding: 0.5rem\">Arrivo:</td>\n        <td style=\"border-bottom: solid white 1px; padding: 0.5rem; background-color: lightgray;\">{{ $json.Arrivo }} - {{ $json['Arrivo - data / ora'].replaceAll(\"/\", \"-\").slice(0, -3) }}</td>\n    </tr>\n</table>\n\n<p style=\"font-family: system-ui; margin-top: 1.5rem\">\n    All copied!<br />\n    A presto e... buon volo!<br />\n    <br />\n    Aviosuperficie Baialupo<br />\n    <a mailto=\"info@baialupo.com\">info@baialupo.com</a>\n</p>",
+        "options": {
+          "appendAttribution": false,
+          "bccList": "info@baialupo.com, ignazio.ingenito@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -896
+      ],
+      "id": "630f3c2b-d9f9-46b4-b63c-e937f1c8d452",
+      "name": "Send Mail",
+      "webhookId": "e76669c2-352f-4b36-bd9d-ecf617fa81f6",
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gphebVm5FwOJmwGp",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour",
+              "minute": 59
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+          "mode": "list",
+          "cachedResultName": "Registro movimenti Aviosuperficie Baialupo (Risposte)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 32864457,
+          "mode": "list",
+          "cachedResultName": "Risposte",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4/edit#gid=32864457"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -704
+      ],
+      "id": "41aba593-92f3-4009-a7bc-f42bc009b6c4",
+      "name": "On new flight",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "cixbex53fW9wyng7",
+          "name": "Google Sheets Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Set Notifica",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Look for new flights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look for new flights": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Notifica": {
+      "main": [
+        [
+          {
+            "node": "Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update": {
+      "main": [
+        [
+          {
+            "node": "Get All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Mail": {
+      "main": [
+        []
+      ]
+    },
+    "On new flight": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "node:Google Sheets Trigger": {
+      "documentId": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+      "sheetId": 32864457,
+      "lastIndexChecked": 13
+    },
+    "node:Google Sheets Trigger1": {
+      "documentId": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+      "sheetId": 32864457,
+      "lastIndexChecked": 50
+    },
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    },
+    "node:On new flight": {
+      "documentId": "1fdFUgba1cFQtRE9d4J76LsBO-YgBefYs6VmcKuplEG4",
+      "sheetId": 32864457,
+      "lastIndexChecked": 91
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "13008c91-1a7d-4842-853a-35a99c3bf213",
+  "activeVersionId": "2aa9067e-30c0-48e4-9276-dae2636253e5",
+  "versionCounter": 417,
+  "triggerCount": 2,
+  "tags": [
+    {
+      "updatedAt": "2025-05-10T14:37:04.374Z",
+      "createdAt": "2025-05-10T14:37:04.374Z",
+      "id": "G5RRKFMIPPx5NHrq",
+      "name": "Baialupo"
+    }
+  ],
+  "shared": [
+    {
+      "updatedAt": "2026-02-03T20:55:51.947Z",
+      "createdAt": "2026-02-03T20:55:51.947Z",
+      "role": "workflow:owner",
+      "workflowId": "BEXKWpCuMMV4iMad",
+      "projectId": "UrQsb6WS05D3GpPl",
+      "project": {
+        "updatedAt": "2026-01-31T20:22:54.037Z",
+        "createdAt": "2026-01-31T20:07:57.352Z",
+        "id": "UrQsb6WS05D3GpPl",
+        "name": "Ignazio ignazio.ingenito@gmail.com <ignazio.ingenito@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "435ce580-3569-4489-8c16-791fef901ced"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

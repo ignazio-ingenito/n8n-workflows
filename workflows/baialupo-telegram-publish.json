@@ -1,0 +1,802 @@
+{
+  "updatedAt": "2026-05-29T17:30:23.687Z",
+  "createdAt": "2026-05-29T00:00:00.000Z",
+  "id": "8c7b4f25-4c6d-4a8f-a58d-8b5f0c5e36e3",
+  "name": "Baialupo Telegram Publish",
+  "description": "Hooks-backed Baialupo approval page flow with Telegram notifications only.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "baia/telegram/shortlist",
+        "responseMode": "responseNode"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -960,
+        -160
+      ],
+      "id": "f5dd2a0a-79f0-4a5f-9d4b-1e2f3f5a6d10",
+      "name": "Receive shortlist"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const inbound = $input.first().json.body ?? $input.first().json;\nconst candidates = inbound.candidates;\n\nif (!Array.isArray(candidates) || candidates.length === 0 || candidates.length > 5) {\n  throw new Error('Expected 1 to 5 candidates');\n}\n\nconst chatId = inbound.chat_id;\nif (!chatId) {\n  throw new Error('Missing chat_id in shortlist payload');\n}\n\nconst runId = inbound.run_id ?? ('baialupo-' + new Date().toISOString().slice(0, 10));\n\nconst shortDescription = (candidate) => {\n  if (candidate.description) {\n    return candidate.description;\n  }\n\n  const body = candidate.content\n    .replace(/^---[\\s\\S]*?---\\n?/, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  return body.slice(0, 140);\n};\n\nconst normalized = candidates.map((candidate, index) => {\n  if (!candidate.path || !candidate.title || !candidate.slug || !candidate.content) {\n    throw new Error('Candidate ' + (index + 1) + ' is missing path, title, slug or content');\n  }\n\n  return {\n    index: index + 1,\n    path: candidate.path,\n    title: candidate.title,\n    slug: candidate.slug,\n    description: shortDescription(candidate),\n    expires: candidate.expires ?? null,\n  };\n});\n\nconst approvalUrl = 'https://hooks.skunklabs.uk/webhook/baia/telegram/approve';\nconst lines = normalized.map((candidate) => {\n  const expiry = candidate.expires ? ' (scade ' + candidate.expires + ')' : '';\n  return candidate.index + '. ' + candidate.title + expiry;\n});\n\nconst message = [\n  'Baialupo shortlist ' + runId,\n  '',\n  ...lines,\n  '',\n  'Apri la pagina di approvazione: ' + approvalUrl,\n  'Clicca il titolo dell articolo da pubblicare.',\n  'Il workflow imposterà featured=1 solo sul selezionato e featured=0 sugli altri candidati.',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      runId,\n      chatId,\n      count: normalized.length,\n      approvalUrl,\n      candidates,\n      normalizedCandidates: normalized,\n      message,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        -160
+      ],
+      "id": "8ac5c88a-1dd8-4b2a-ae4f-ec6de796ca37",
+      "name": "Prepare shortlist"
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "baialupo_approvals",
+        "columns": {
+          "column": [
+            {
+              "name": "runId",
+              "type": "string"
+            },
+            {
+              "name": "chatId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "candidatesJson",
+              "type": "string"
+            },
+            {
+              "name": "approvalUrl",
+              "type": "string"
+            },
+            {
+              "name": "message",
+              "type": "string"
+            },
+            {
+              "name": "count",
+              "type": "number"
+            },
+            {
+              "name": "selectedChoice",
+              "type": "number"
+            },
+            {
+              "name": "selectedTitle",
+              "type": "string"
+            },
+            {
+              "name": "selectedSlug",
+              "type": "string"
+            },
+            {
+              "name": "publicUrl",
+              "type": "string"
+            },
+            {
+              "name": "consumedAt",
+              "type": "date"
+            },
+            {
+              "name": "publishedAt",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -352
+      ],
+      "id": "f1e0d7c5-3d3d-4b40-89e0-15d6f61a7b01",
+      "name": "Ensure approvals table"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "mode": "name",
+          "value": "baialupo_approvals"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "runId",
+              "condition": "eq",
+              "keyValue": "={{ $('Prepare shortlist').first().json.runId }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "runId": "={{ $('Prepare shortlist').first().json.runId }}",
+            "chatId": "={{ $('Prepare shortlist').first().json.chatId }}",
+            "status": "pending",
+            "candidatesJson": "={{ JSON.stringify($('Prepare shortlist').first().json.normalizedCandidates) }}",
+            "approvalUrl": "={{ $('Prepare shortlist').first().json.approvalUrl }}",
+            "message": "={{ $('Prepare shortlist').first().json.message }}",
+            "count": "={{ $('Prepare shortlist').first().json.count }}",
+            "selectedChoice": null,
+            "selectedTitle": null,
+            "selectedSlug": null,
+            "publicUrl": null,
+            "consumedAt": null,
+            "publishedAt": null
+          }
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -16
+      ],
+      "id": "a4f3cdd5-5f07-4379-9e9b-302f95c5f6d1",
+      "name": "Save pending approval"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      },
+      "onError": "continueRegularOutput",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -448,
+        -160
+      ],
+      "id": "cf5e7f63-e8bb-43f9-9d64-2edfa4b9d0f1",
+      "name": "Send shortlist to Telegram"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, run_id: $('Save pending approval').first().json.runId, candidates: $('Save pending approval').first().json.count, approval_url: $('Save pending approval').first().json.approvalUrl }) }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        -160
+      ],
+      "id": "ebdf4a8f-3d1b-4a04-bfd1-d8ebf0f66b31",
+      "name": "Acknowledge intake"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function rewriteFeatured(markdown, featuredValue) {\n  const match = markdown.match(/^---\\n([\\s\\S]*?)\\n---\\n?/);\n\n  if (!match) {\n    throw new Error('Missing YAML frontmatter');\n  }\n\n  const frontmatterLines = match[1].split('\\n');\n  let foundFeatured = false;\n\n  const rewrittenLines = frontmatterLines.map((line) => {\n    if (/^featured:\\s*/.test(line)) {\n      foundFeatured = true;\n      return `featured: ${featuredValue}`;\n    }\n\n    return line;\n  });\n\n  if (!foundFeatured) {\n    rewrittenLines.push(`featured: ${featuredValue}`);\n  }\n\n  return `---\\n${rewrittenLines.join('\\n')}\\n---\\n${markdown.slice(match[0].length)}`;\n}\n\nconst original = $input.first().json;\nconst updatedContent = rewriteFeatured(original.content, 1);\n\nreturn [\n  {\n    json: {\n      ...original,\n      updatedContent,\n      commitMessage: `feat(content): toggle featured for ${original.slug}`,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        336
+      ],
+      "id": "8f0af8c3-25c5-4b71-8d38-90a5a40d0be0",
+      "name": "Prepare file updates"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repo}}/contents/{{$json.path}}?ref={{$json.branch}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -192,
+        336
+      ],
+      "id": "f3d4be89-7b60-4057-8d6b-79f9dd0f3b78",
+      "name": "Fetch file metadata",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        64,
+        336
+      ],
+      "id": "d9171e1f-fd19-49e3-89be-238bc5fbebd8",
+      "name": "Merge file data"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return $input.all().map((item) => ({\n  json: {\n    owner: item.json.owner,\n    repo: item.json.repo,\n    branch: item.json.branch,\n    path: item.json.path,\n    sha: item.json.sha,\n    contentBase64: Buffer.from(item.json.updatedContent).toString('base64'),\n    commitMessage: item.json.commitMessage,\n    title: item.json.title,\n    slug: item.json.slug,\n    publicUrl: item.json.publicUrl,\n    selected: item.json.selected,\n    runId: item.json.runId,\n    chatId: item.json.chatId,\n  },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        336
+      ],
+      "id": "9f2cc9f7-b7ec-447f-9ec4-0ac8f4d2c7e4",
+      "name": "Build commit payloads"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repo}}/contents/{{$json.path}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"{{$json.commitMessage}}\",\n  \"content\": \"{{$json.contentBase64}}\",\n  \"branch\": \"{{$json.branch}}\",\n  \"sha\": \"{{$json.sha}}\"\n}",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        576,
+        336
+      ],
+      "id": "8d4aa8f0-6035-4c01-8a37-4d82c7f2aaf7",
+      "name": "Commit files",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 1,
+        "keep": "firstItems"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        832,
+        336
+      ],
+      "id": "d62a9dc7-4b6f-4e0f-80f2-9d4ddf2a7d48",
+      "name": "Keep first item"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Build commit payloads').first().json.owner }}/{{ $('Build commit payloads').first().json.repo }}/actions/workflows/deploy.yaml/dispatches",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ref\": \"{{ $('Build commit payloads').first().json.branch }}\"\n}",
+        "options": {
+          "sendCredentialsOnCrossOriginRedirect": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1088,
+        336
+      ],
+      "id": "d6c84c9e-58a9-4bd0-b51f-476fc1f2a3f9",
+      "name": "Dispatch deploy",
+      "credentials": {
+        "githubApi": {
+          "id": "eASX8oZcknKPY1lX",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Build commit payloads').first().json.chatId }}",
+        "text": "={{ `Pubblicato su Baialupo: ${$('Build commit payloads').first().json.title}\\n${$('Build commit payloads').first().json.publicUrl}` }}"
+      },
+      "onError": "continueRegularOutput",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        336
+      ],
+      "id": "d39210c2-404a-4a2a-944c-2ceac4af43ef",
+      "name": "Send confirmation"
+    },
+    {
+      "id": "2d7cf3c2-1df0-4a7d-9d7f-a5a4b5d5a9b1",
+      "name": "Approve shortlist page",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -960,
+        560
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "baia/telegram/approve",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {
+          "responsePropertyName": "html",
+          "responseContentType": "text/html"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "mode": "name",
+          "value": "baialupo_approvals"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "runId",
+              "condition": "eq",
+              "keyValue": "={{ $('Approve shortlist page').first().json.query.runId }}"
+            },
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "pending"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        560
+      ],
+      "id": "f76b82d7-6b21-4d1c-b2f7-8a49d6bc7c86",
+      "name": "Load approval row"
+    },
+    {
+      "id": "b1b36f4c-4577-4c3f-9d2d-1e7d3b1d9c03",
+      "name": "Render approval page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function escapeHtml(value) {\n  return String(value)\n    .replaceAll('&', '&amp;')\n    .replaceAll('<', '&lt;')\n    .replaceAll('>', '&gt;')\n    .replaceAll('\\\"', '&quot;')\n    .replaceAll(\"'\", '&#39;');\n}\n\nconst row = $input.first().json;\nif (!row) {\n  throw new Error('No Baialupo shortlist is waiting for approval');\n}\n\nconst candidates = JSON.parse(row.candidatesJson ?? '[]');\nif (!Array.isArray(candidates) || candidates.length === 0) {\n  throw new Error('Invalid Baialupo approval row');\n}\n\nconst rows = candidates.map((candidate) => {\n  const href = 'https://hooks.skunklabs.uk/webhook/baia/telegram/publish?choice=' + candidate.index + '&runId=' + encodeURIComponent(row.runId);\n  const expiry = candidate.expires ? ' <span class=\"expiry\">(scade ' + escapeHtml(candidate.expires) + ')</span>' : '';\n  return '<li class=\"candidate\">' +\n    '<a class=\"choice\" href=\"' + href + '\">' + escapeHtml(candidate.title) + '</a>' +\n    '<div class=\"description\">' + escapeHtml(candidate.description) + '</div>' +\n    '<div class=\"meta\">' + candidate.index + expiry + '</div>' +\n    '</li>';\n}).join('\\n');\n\nconst html = [\n  '<!doctype html>',\n  '<html lang=\"it\">',\n  '  <head>',\n  '    <meta charset=\"utf-8\">',\n  '    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">',\n  '    <title>Baialupo approval</title>',\n  '    <style>',\n  '      body { font-family: system-ui, sans-serif; margin: 24px; line-height: 1.4; }',\n  '      h1 { font-size: 1.25rem; margin: 0 0 1rem; }',\n  '      ol { padding-left: 1.25rem; }',\n  '      li { margin: 0 0 1rem; }',\n  '      .choice { font-weight: 700; text-decoration: none; }',\n  '      .description, .meta { color: #555; font-size: 0.95rem; }',\n  '      .meta { margin-top: 0.25rem; }',\n  '      .expiry { color: #7a4a00; }',\n  '    </style>',\n  '  </head>',\n  '  <body>',\n  '    <h1>Baialupo shortlist ' + escapeHtml(row.runId) + '</h1>',\n  '    <ol>',\n  '      ' + rows,\n  '    </ol>',\n  '  </body>',\n  '</html>',\n].join('\\n');\n\nreturn [{ json: { html, runId: row.runId } }];"
+      }
+    },
+    {
+      "id": "b2b6d8a9-9c66-4cb5-8e2b-5f1fd5c3c1f0",
+      "name": "Approve shortlist choice",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -960,
+        736
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "baia/telegram/publish",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "mode": "name",
+          "value": "baialupo_approvals"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "runId",
+              "condition": "eq",
+              "keyValue": "={{ $('Approve shortlist choice').first().json.query.runId }}"
+            },
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "pending"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        736
+      ],
+      "id": "c41a8fb9-9f75-4f9d-85d5-4f51f0b94e3b",
+      "name": "Load approval row for choice"
+    },
+    {
+      "id": "d2d7dc8f-0130-4c7a-96ef-41ac5c1c1f22",
+      "name": "Parse approval choice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        736
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const row = $input.first().json;\nconst choiceRaw = $('Approve shortlist choice').first().json.query.choice ?? $('Approve shortlist choice').first().json.params.choice;\nconst choice = Number(choiceRaw);\n\nif (!row) {\n  throw new Error('No Baialupo shortlist is waiting for approval');\n}\n\nconst candidates = JSON.parse(row.candidatesJson ?? '[]');\nif (!Array.isArray(candidates) || candidates.length === 0) {\n  throw new Error('Invalid Baialupo approval row');\n}\n\nif (!Number.isInteger(choice) || choice < 1 || choice > candidates.length) {\n  throw new Error('Invalid article number');\n}\n\nconst selected = candidates[choice - 1];\n\nreturn [\n  {\n    json: {\n      ...selected,\n      choice,\n      selected: true,\n      runId: row.runId,\n      chatId: row.chatId,\n      owner: 'ignazio-ingenito',\n      repo: 'baialupo.com',\n      branch: 'main',\n      publicUrl: 'https://baialupo.com/' + selected.slug,\n      desiredFeatured: 1,\n      approvalRowId: row.id,\n    },\n  },\n];"
+      }
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "mode": "name",
+          "value": "baialupo_approvals"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "runId",
+              "condition": "eq",
+              "keyValue": "={{ $json.runId }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "runId": "={{ $json.runId }}",
+            "chatId": "={{ $json.chatId }}",
+            "status": "consumed",
+            "candidatesJson": "={{ $('Load approval row for choice').first().json.candidatesJson }}",
+            "approvalUrl": "={{ $('Load approval row for choice').first().json.approvalUrl }}",
+            "message": "={{ $('Load approval row for choice').first().json.message }}",
+            "count": "={{ $('Load approval row for choice').first().json.count }}",
+            "selectedChoice": "={{ $json.choice }}",
+            "selectedTitle": "={{ $json.title }}",
+            "selectedSlug": "={{ $json.slug }}",
+            "publicUrl": "={{ $json.publicUrl }}",
+            "consumedAt": "={{ $now.toISO() }}",
+            "publishedAt": null
+          }
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        736
+      ],
+      "id": "8b3c1c7c-2f5f-46a7-8a5c-590d7c5e7d6d",
+      "name": "Mark approval consumed"
+    },
+    {
+      "id": "0e79d081-b9e4-42d8-a8ca-4a3a77e8cc01",
+      "name": "Return approval result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1856,
+        336
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, run_id: $('Build commit payloads').first().json.runId, choice: $('Build commit payloads').first().json.choice, title: $('Build commit payloads').first().json.title, public_url: $('Build commit payloads').first().json.publicUrl }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Receive shortlist": {
+      "main": [
+        [
+          {
+            "node": "Prepare shortlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare shortlist": {
+      "main": [
+        [
+          {
+            "node": "Ensure approvals table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure approvals table": {
+      "main": [
+        [
+          {
+            "node": "Save pending approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save pending approval": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge intake",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send shortlist to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send shortlist to Telegram": {
+      "main": []
+    },
+    "Acknowledge intake": {
+      "main": []
+    },
+    "Approve shortlist page": {
+      "main": [
+        [
+          {
+            "node": "Load approval row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load approval row": {
+      "main": [
+        [
+          {
+            "node": "Render approval page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render approval page": {
+      "main": []
+    },
+    "Approve shortlist choice": {
+      "main": [
+        [
+          {
+            "node": "Load approval row for choice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load approval row for choice": {
+      "main": [
+        [
+          {
+            "node": "Parse approval choice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse approval choice": {
+      "main": [
+        [
+          {
+            "node": "Mark approval consumed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark approval consumed": {
+      "main": [
+        [
+          {
+            "node": "Prepare file updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare file updates": {
+      "main": [
+        [
+          {
+            "node": "Fetch file metadata",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge file data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch file metadata": {
+      "main": [
+        [
+          {
+            "node": "Merge file data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge file data": {
+      "main": [
+        [
+          {
+            "node": "Build commit payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build commit payloads": {
+      "main": [
+        [
+          {
+            "node": "Commit files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commit files": {
+      "main": [
+        [
+          {
+            "node": "Keep first item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep first item": {
+      "main": [
+        [
+          {
+            "node": "Dispatch deploy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch deploy": {
+      "main": [
+        [
+          {
+            "node": "Send confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send confirmation": {
+      "main": [
+        [
+          {
+            "node": "Return approval result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return approval result": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "93d9b4e2-8ad1-4f8d-9f8d-8c6f5e37a5f2",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-29T00:00:00.000Z",
+      "createdAt": "2026-05-29T00:00:00.000Z",
+      "role": "workflow:owner",
+      "workflowId": "8c7b4f25-4c6d-4a8f-a58d-8b5f0c5e36e3",
+      "projectId": "UrQsb6WS05D3GpPl",
+      "project": {
+        "updatedAt": "2026-01-31T20:22:54.037Z",
+        "createdAt": "2026-01-31T20:07:57.352Z",
+        "id": "UrQsb6WS05D3GpPl",
+        "name": "Ignazio ignazio.ingenito@gmail.com <ignazio.ingenito@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "435ce580-3569-4489-8c16-791fef901ced"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
