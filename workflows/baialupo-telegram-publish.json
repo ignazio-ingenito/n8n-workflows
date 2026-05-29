@@ -25,7 +25,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const inbound = $input.first().json.body ?? $input.first().json;\nconst candidates = inbound.candidates;\n\nif (!Array.isArray(candidates) || candidates.length === 0 || candidates.length > 5) {\n  throw new Error('Expected 1 to 5 candidates');\n}\n\nconst chatId = inbound.chat_id;\nif (!chatId) {\n  throw new Error('Missing chat_id in shortlist payload');\n}\n\nconst runId = inbound.run_id ?? ('baialupo-' + new Date().toISOString().slice(0, 10));\n\nconst shortDescription = (candidate) => {\n  if (candidate.description) {\n    return candidate.description;\n  }\n\n  const body = candidate.content\n    .replace(/^---[\\s\\S]*?---\\n?/, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  return body.slice(0, 140);\n};\n\nconst normalized = candidates.map((candidate, index) => {\n  if (!candidate.path || !candidate.title || !candidate.slug || !candidate.content) {\n    throw new Error('Candidate ' + (index + 1) + ' is missing path, title, slug or content');\n  }\n\n  return {\n    index: index + 1,\n    path: candidate.path,\n    title: candidate.title,\n    slug: candidate.slug,\n    description: shortDescription(candidate),\n    expires: candidate.expires ?? null,\n  };\n});\n\nconst approvalUrl = 'https://hooks.skunklabs.uk/webhook/baia/telegram/approve';\nconst lines = normalized.map((candidate) => {\n  const expiry = candidate.expires ? ' (scade ' + candidate.expires + ')' : '';\n  return candidate.index + '. ' + candidate.title + expiry;\n});\n\nconst message = [\n  'Baialupo shortlist ' + runId,\n  '',\n  ...lines,\n  '',\n  'Apri la pagina di approvazione: ' + approvalUrl,\n  'Clicca il titolo dell articolo da pubblicare.',\n  'Il workflow imposterà featured=1 solo sul selezionato e featured=0 sugli altri candidati.',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      runId,\n      chatId,\n      count: normalized.length,\n      approvalUrl,\n      candidates,\n      normalizedCandidates: normalized,\n      message,\n    },\n  },\n];"
+        "jsCode": "const inbound = $input.first().json.body ?? $input.first().json;\nconst candidates = inbound.candidates;\n\nif (!Array.isArray(candidates) || candidates.length === 0 || candidates.length > 5) {\n  throw new Error('Expected 1 to 5 candidates');\n}\n\nconst chatId = inbound.chat_id;\nif (!chatId) {\n  throw new Error('Missing chat_id in shortlist payload');\n}\n\nconst runId = inbound.run_id ?? ('baialupo-' + new Date().toISOString().slice(0, 10));\n\nconst shortDescription = (candidate) => {\n  if (candidate.description) {\n    return candidate.description;\n  }\n\n  const body = candidate.content\n    .replace(/^---[\\s\\S]*?---\\n?/, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  return body.slice(0, 140);\n};\n\nconst normalized = candidates.map((candidate, index) => {\n  if (!candidate.path || !candidate.title || !candidate.slug || !candidate.content) {\n    throw new Error('Candidate ' + (index + 1) + ' is missing path, title, slug or content');\n  }\n\n  return {\n    index: index + 1,\n    path: candidate.path,\n    title: candidate.title,\n    slug: candidate.slug,\n    description: shortDescription(candidate),\n    expires: candidate.expires ?? null,\n  };\n});\n\nconst approvalUrl = 'https://hooks.skunklabs.uk/webhook/baia/telegram/approve?runId=' + encodeURIComponent(runId);\nconst lines = normalized.map((candidate) => {\n  const expiry = candidate.expires ? ' (scade ' + candidate.expires + ')' : '';\n  return candidate.index + '. ' + candidate.title + expiry;\n});\n\nconst message = [\n  'Baialupo shortlist ' + runId,\n  '',\n  ...lines,\n  '',\n  '<a href=\"' + approvalUrl + '\">Apri la pagina di approvazione</a>',\n  'Clicca il titolo dell articolo da pubblicare.',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      runId,\n      chatId,\n      count: normalized.length,\n      approvalUrl,\n      candidates,\n      normalizedCandidates: normalized,\n      message,\n    },\n  },\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -161,7 +161,10 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}"
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parseMode": "HTML"
+        }
       },
       "onError": "continueRegularOutput",
       "type": "n8n-nodes-base.telegram",
@@ -190,7 +193,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "function rewriteFeatured(markdown, featuredValue) {\n  const match = markdown.match(/^---\\n([\\s\\S]*?)\\n---\\n?/);\n\n  if (!match) {\n    throw new Error('Missing YAML frontmatter');\n  }\n\n  const frontmatterLines = match[1].split('\\n');\n  let foundFeatured = false;\n\n  const rewrittenLines = frontmatterLines.map((line) => {\n    if (/^featured:\\s*/.test(line)) {\n      foundFeatured = true;\n      return `featured: ${featuredValue}`;\n    }\n\n    return line;\n  });\n\n  if (!foundFeatured) {\n    rewrittenLines.push(`featured: ${featuredValue}`);\n  }\n\n  return `---\\n${rewrittenLines.join('\\n')}\\n---\\n${markdown.slice(match[0].length)}`;\n}\n\nconst original = $input.first().json;\nconst updatedContent = rewriteFeatured(original.content, 1);\n\nreturn [\n  {\n    json: {\n      ...original,\n      updatedContent,\n      commitMessage: `feat(content): toggle featured for ${original.slug}`,\n    },\n  },\n];"
+        "jsCode": "function rewriteFeatured(markdown, featuredValue) {\n  const match = markdown.match(/^---\\n([\\s\\S]*?)\\n---\\n?/);\n\n  if (!match) {\n    throw new Error('Missing YAML frontmatter');\n  }\n\n  const frontmatterLines = match[1].split('\\n');\n  let foundFeatured = false;\n\n  const rewrittenLines = frontmatterLines.map((line) => {\n    if (/^featured:\\s*/.test(line)) {\n      foundFeatured = true;\n      return 'featured: ' + featuredValue;\n    }\n\n    return line;\n  });\n\n  if (!foundFeatured) {\n    rewrittenLines.push('featured: ' + featuredValue);\n  }\n\n  return '---\\n' + rewrittenLines.join('\\n') + '\\n---\\n' + markdown.slice(match[0].length);\n}\n\nconst approval = $('Load approval row for choice').first().json;\nconst file = $('Fetch file metadata').first().json;\n\nif (!approval) {\n  throw new Error('Missing approval row');\n}\n\nif (!file) {\n  throw new Error('Missing file metadata');\n}\n\nconst decodedContent = Buffer.from(file.content ?? '', 'base64').toString('utf8');\n\nif (!decodedContent) {\n  throw new Error('Missing file content from GitHub');\n}\n\nconst updatedContent = rewriteFeatured(decodedContent, 1);\n\nreturn [\n  {\n    json: {\n      ...approval,\n      owner: approval.owner ?? \"ignazio-ingenito\",\n      repo: approval.repo ?? \"baialupo.com\",\n      branch: approval.branch ?? \"main\",\n      path: file.path ?? approval.path,\n      sha: file.sha,\n      title: approval.selectedTitle,\n      slug: approval.selectedSlug,\n      publicUrl: approval.publicUrl,\n      runId: approval.runId,\n      chatId: approval.chatId,\n      selected: true,\n      selectedChoice: approval.selectedChoice,\n      updatedContent,\n      commitMessage: 'feat(content): toggle featured for ' + approval.selectedSlug,\n    },\n  },\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -204,7 +207,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://api.github.com/repos/{{$json.owner}}/{{$json.repo}}/contents/{{$json.path}}?ref={{$json.branch}}",
+        "url": "=https://api.github.com/repos/{{ $('Parse approval choice').first().json.owner }}/{{ $('Parse approval choice').first().json.repo }}/contents/{{ $('Parse approval choice').first().json.path }}?ref={{ $('Parse approval choice').first().json.branch }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "githubApi",
         "options": {
@@ -654,17 +657,6 @@
       "main": [
         [
           {
-            "node": "Prepare file updates",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare file updates": {
-      "main": [
-        [
-          {
             "node": "Fetch file metadata",
             "type": "main",
             "index": 0
@@ -675,6 +667,17 @@
             "node": "Merge file data",
             "type": "main",
             "index": 1
+          }
+        ]
+      ]
+    },
+    "Prepare file updates": {
+      "main": [
+        [
+          {
+            "node": "Build commit payloads",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -694,7 +697,7 @@
       "main": [
         [
           {
-            "node": "Build commit payloads",
+            "node": "Prepare file updates",
             "type": "main",
             "index": 0
           }
