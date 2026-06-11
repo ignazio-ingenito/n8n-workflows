@@ -3,6 +3,9 @@
 !.env.example
 
 # Local tooling
+.gitnexus/
+.claude/
+.codex/
 .DS_Store
 .idea/
 .vscode/

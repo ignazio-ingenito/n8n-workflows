@@ -34,6 +34,16 @@ present.
 
 ## Current Decisions
 
+- The strategic source of truth for job-search positioning, role families,
+  query seeds, scoring, market-observatory rules and calibration lives in the
+  `resume` repository, under:
+  - `/home/iingenito/projects/personal/resume/profile/positioning.md`
+  - `/home/iingenito/projects/personal/resume/profile/target-roles.md`
+  - `/home/iingenito/projects/personal/resume/job-search/market-observatory-spec.md`
+  - `/home/iingenito/projects/personal/resume/job-search/linkedin-query-seeds.md`
+  - `/home/iingenito/projects/personal/resume/job-search/italy-market-sources.md`
+  - `/home/iingenito/projects/personal/resume/job-search/scoring-model.md`
+  - `/home/iingenito/projects/personal/resume/automations/n8n-workflows.md`
 - Use a repository separate from `homelab` for workflow JSON.
 - Do not rely on n8n Source Control.
 - Plan for GitOps import through Kubernetes, not manual pod mutation.
@@ -48,3 +58,13 @@ present.
   dummy workflow prove the import path before exporting current workflows?
 - Should this repository get its own GitHub Actions validation workflow before
   ArgoCD integration?
+
+## Repository Scope Reminder
+
+This repository is the operational companion for the job-search automations.
+It stores exported workflow JSON, import and activation notes, and the UI-level
+credential binding steps needed to make the workflows run.
+
+It does not own the underlying positioning model, target-role taxonomy, query
+seed set, scoring model, or market-observatory rules; those remain in the
+`resume` repository and should be edited there first.

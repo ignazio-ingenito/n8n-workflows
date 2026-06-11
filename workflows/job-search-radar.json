@@ -1,0 +1,694 @@
+{
+  "name": "Job Search Radar",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b8fd02a7-0a3d-4bf9-91b6-11d54bb3c8a1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "b0203b90-8385-447d-9344-aa4a9d06e861",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -900,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://remotive.com/api/remote-jobs?search=engineering%20manager%20cloud%20platform%20ai%20fintech",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "0f9d0a6a-3811-4f65-a00c-a6512c9c7997",
+      "name": "Fetch Remotive",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.arbeitnow.com/api/job-board-api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "a0681611-8075-4e32-b101-939cfc0fb918",
+      "name": "Fetch Arbeitnow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://remoteok.com/api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "bb0f5f54-e0f7-48b8-a423-7e823f2f4f6e",
+      "name": "Fetch RemoteOK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst taxonomy = {\n  roleFamilies: [\n    {\n      id: 'cto_fractional_founder',\n      label: 'CTO / Fractional CTO / Technical Co-founder',\n      aliases: [\n        'cto', 'chief technology officer', 'fractional cto', 'cto frazionale',\n        'cto part-time', 'technical co-founder', 'co-founder tecnico',\n        'fondatore tecnico', 'direttore tecnico', 'responsabile tecnico',\n        'responsabile tecnologia', 'startup cto', 'interim cto',\n        'founding engineer'\n      ],\n      positive: [\n        'roadmap', 'architecture', 'architettura', 'product', 'prodotto',\n        'startup', 'scaleup', 'scale-up', 'founder', 'co-founder',\n        'build from scratch', 'zero to one', '0 to 1', 'saas', 'cloud-native',\n        'team', 'budget', 'platform', 'piattaforma'\n      ],\n      negative: ['procurement', 'helpdesk', 'it operations only', 'solo fornitori']\n    },\n    {\n      id: 'engineering_leadership',\n      label: 'Engineering Leadership',\n      aliases: [\n        'head of engineering', 'engineering manager', 'director of engineering',\n        'vp engineering', 'software engineering manager', 'engineering lead',\n        'responsabile sviluppo software', 'responsabile ingegneria del software',\n        'direttore engineering', 'direttore it', 'responsabile it',\n        'responsabile delivery tecnica'\n      ],\n      positive: [\n        'delivery', 'roadmap', 'team', 'teams', 'hiring', 'mentoring',\n        'people management', 'quality', 'qualita', 'architecture',\n        'modernization', 'modernizzazione', 'platform'\n      ],\n      negative: ['scrum only', 'pmo only', 'reporting only']\n    },\n    {\n      id: 'platform_cloud_devops',\n      label: 'Platform / Cloud / DevOps Leadership',\n      aliases: [\n        'responsabile devops', 'devops manager', 'cloud architect',\n        'responsabile cloud', 'cloud manager', 'cloud transformation lead',\n        'responsabile infrastrutture', 'responsabile platform',\n        'responsabile piattaforma', 'platform engineering lead',\n        'cloud engineering manager', 'sre manager', 'site reliability',\n        'infrastructure platform lead', 'cloud operations lead',\n        'platform engineer', 'database platform engineer',\n        'data infrastructure engineer', 'data infrastructure'\n      ],\n      positive: [\n        'aws', 'eks', 'ecs', 'lambda', 'kubernetes', 'argocd', 'gitops',\n        'docker', 'terraform', 'opentofu', 'ci/cd', 'observability',\n        'osservabilita', 'incident management', 'reliability',\n        'internal platform', 'developer experience', 'self-service',\n        'automation', 'automazione', 'migration', 'migrazione'\n      ],\n      negative: ['helpdesk', 'desktop support', 'ticketing', 'legacy only']\n    },\n    {\n      id: 'ai_data_document_intelligence',\n      label: 'AI / Data / Document Intelligence Leadership',\n      aliases: [\n        'ai lead', 'ai manager', 'responsabile ai', 'applied ai lead',\n        'data platform lead', 'data engineering manager', 'responsabile data',\n        'responsabile document intelligence', 'document intelligence',\n        'ml platform lead', 'ai solution architect', 'ai engineer',\n        'ai architect', 'llm engineer', 'machine learning engineer'\n      ],\n      positive: [\n        'llm', 'ocr', 'pdf', 'document understanding', 'classification',\n        'extraction', 'rag', 'workflow automation', 'mlops',\n        'operationalization', 'data platform', 'data quality', 'knowledge'\n      ],\n      negative: ['data analyst only', 'bi reporting only', 'academic research only']\n    },\n    {\n      id: 'innovation_transformation',\n      label: 'Innovation / Digital Transformation',\n      aliases: [\n        'innovation manager', 'responsabile innovazione',\n        'responsabile trasformazione digitale', 'digital transformation manager',\n        'digital transformation lead', 'technology innovation lead',\n        'transformation manager', 'enterprise innovation manager'\n      ],\n      positive: [\n        'modernization', 'modernizzazione', 'pilot-to-production',\n        'executive sponsor', 'sponsorship', 'cloud', 'ai', 'automation',\n        'operating model', 'roadmap', 'workshop', 'assessment', 'prototype',\n        'prototipo'\n      ],\n      negative: ['eventi', 'communication only', 'slide only', 'pmo only']\n    },\n    {\n      id: 'enterprise_solution_architecture',\n      label: 'Enterprise / Solution / Cloud Architecture',\n      aliases: [\n        'enterprise architect', 'solution architect', 'cloud architect',\n        'technical architect', 'principal architect', 'platform architect',\n        'integration architect', 'architetto soluzioni', 'architetto cloud',\n        'architetto enterprise', 'pre-sales cloud', 'pre-sales ai',\n        'pre-sales fintech'\n      ],\n      positive: [\n        'integration', 'integrazione', 'api', 'security', 'sicurezza',\n        'governance', 'standards', 'roadmap', 'modernization',\n        'cloud adoption', 'delivery', 'architecture review'\n      ],\n      negative: ['slide only', 'vendor selection only', 'body shopping']\n    }\n  ],\n  seniorityTerms: ['senior', 'lead', 'principal', 'manager', 'head', 'director', 'cto', 'vp', 'staff', 'responsabile', 'direttore'],\n  domains: ['fintech', 'banking', 'financial services', 'wealth management', 'private banking', 'npl', 'non-performing loans', 'saas', 'logistics', 'supply chain', 'regulated', 'enterprise'],\n  candidateAdvantage: {\n    bankingOrRegulatedExperience: ['banking', 'bank', 'fintech', 'financial services', 'private banking', 'wealth management', 'regulated', 'compliance', 'npl', 'non-performing loans'],\n    startupAndProductProof: ['startup', 'scaleup', 'scale-up', 'founder', 'co-founder', 'product', 'saas', 'greenfield', 'build from scratch', 'zero to one', '0 to 1'],\n    platformAndCloudDepth: ['aws', 'eks', 'kubernetes', 'argocd', 'gitops', 'docker', 'terraform', 'opentofu', 'devops', 'platform engineering', 'cloud-native', 'observability'],\n    leadershipAndDeliveryProof: ['team', 'teams', 'leadership', 'delivery', 'roadmap', 'governance', 'stakeholder', 'vendor', 'mentoring', 'hiring'],\n    crossDomainTranslation: ['business', 'architecture', 'operations', 'pre-sales', 'assessment', 'workshop', 'prototype', 'transformation', 'innovation']\n  },\n  exclusions: ['intern', 'internship', 'praktikum', 'working student', 'werkstudent', 'student', 'trainee', 'junior', 'graduate', 'unpaid', 'entry level', 'entry-level', 'recruiter', 'account executive', 'sales only', 'customer support', 'helpdesk'],\n  hardExclusions: {\n    commercial_role: [\n      'sales', 'account executive', 'business development', 'closer',\n      'head of sales', 'sales specialist', 'inside sales', 'sales contractor'\n    ],\n    content_role: [\n      'writer', 'copywriter', 'content writer', 'video editor',\n      'cinematic video editor', 'freelance writer'\n    ],\n    admin_role: [\n      'office assistant', 'bookkeeping', 'data entry', 'office administrator'\n    ],\n    non_technical_operations: [\n      'customer support', 'customer service', 'customer operations',\n      'customer operations & writing specialist', 'business transformation lead'\n    ],\n    non_permanent_engagement: [\n      'freelance', 'contractor', 'contract role', 'contract position',\n      'contract work', 'independent contractor', 'independent ai engineer',\n      'talent network', 'invite-only network', 'marketplace',\n      'staff augmentation', 'hourly rate', 'typical rates'\n    ],\n    standalone_ic_engineering: [\n      'product engineer', 'full-stack developer', 'full-stack engineer',\n      'fullstack developer', 'fullstack engineer', 'senior full-stack developer',\n      'senior full-stack engineer', 'senior full-stack react developer'\n    ],\n    task_based_work: [\n      'online data analyst', 'data labeling', 'data labeling specialists',\n      'map evaluator', 'survey', 'assessment', 'freelance opportunity'\n    ],\n    junior_entry_level: [\n      'intern', 'internship', 'praktikum', 'working student', 'werkstudent',\n      'student', 'trainee', 'junior', 'graduate', 'entry level', 'entry-level'\n    ]\n  },\n  hardTitleExclusions: [\n    'intern', 'internship', 'praktikum', 'working student', 'werkstudent',\n    'student', 'trainee', 'junior', 'graduate', 'head of sales',\n    'sales development', 'sales manager', 'account executive',\n    'enterprise account executive', 'business development', 'closer',\n    'inside sales', 'sales specialist', 'growth marketing', 'marketing director',\n    'crm manager', 'graphic designer', 'pmo', 'office assistant',\n    'customer support', 'customer service', 'customer operations',\n    'business transformation lead', 'writer', 'copywriter', 'content writer', 'video editor',\n    'online data analyst', 'data labeling', 'map evaluator', 'recruiter',\n    'product engineer', 'full-stack developer', 'full-stack engineer',\n    'fullstack developer', 'fullstack engineer', 'freelance', 'contractor',\n    'independent ai engineer', 'talent network', 'marketplace'\n  ],\n  targetTitleTerms: [\n    'cto', 'chief technology officer', 'fractional cto', 'technical co-founder',\n    'founding engineer', 'head of engineering',\n    'engineering manager', 'director of engineering', 'vp engineering',\n    'engineering lead', 'lead engineer', 'staff engineer', 'principal engineer',\n    'platform engineering lead', 'platform engineer', 'devops manager',\n    'devops lead', 'sre manager', 'cloud architect', 'cloud engineering manager',\n    'database platform engineer', 'data infrastructure engineer',\n    'ai lead', 'ai engineer', 'ai architect', 'llm engineer',\n    'data platform lead', 'data engineering manager', 'ml platform lead',\n    'ai solution architect', 'enterprise architect', 'solution architect',\n    'technical architect', 'principal architect', 'technical product manager'\n  ],\n  locations: ['remote', 'italy', 'italia', 'europe', 'switzerland', 'svizzera', 'london', 'amsterdam', 'brescia', 'milan', 'milano']\n};\n\nfunction asArray(value) {\n  return Array.isArray(value) ? value : [];\n}\n\nfunction normalize(value) {\n  return String(value || '')\n    .toLowerCase()\n    .replace(/&nbsp;/g, ' ')\n    .replace(/[^a-z0-9.+#/-]+/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction containsTerm(text, term) {\n  const normalized = normalize(term);\n  if (!normalized) return false;\n  const normalizedText = normalize(text);\n  if (/^[a-z0-9.+#/-]{1,3}$/.test(normalized)) {\n    return normalizedText.split(' ').includes(normalized);\n  }\n  return normalizedText.includes(normalized);\n}\n\nfunction matches(text, terms) {\n  return terms.filter(term => containsTerm(text, term));\n}\n\nfunction containsWholeTerm(text, term) {\n  const normalized = normalize(term);\n  if (!normalized) return false;\n  const normalizedText = ' ' + normalize(text) + ' ';\n  return normalizedText.includes(' ' + normalized + ' ');\n}\n\nfunction hardMatches(text, terms) {\n  return terms.filter(term => containsWholeTerm(text, term));\n}\n\nfunction clamp(value) {\n  return Math.max(0, Math.min(100, Math.round(value)));\n}\n\nfunction uniq(values) {\n  return [...new Set(values.filter(Boolean))];\n}\n\nfunction detectHardExclusion(title, text, hasTargetTitle) {\n  const bodySignals = [];\n\n  for (const [reason, terms] of Object.entries(taxonomy.hardExclusions)) {\n    const titleTerms = hardMatches(title, terms);\n    if (titleTerms.length) {\n      return {\n        outOfScope: true,\n        exclusionReason: reason,\n        exclusionSignals: uniq(titleTerms.map(term => reason + ':title:' + term))\n      };\n    }\n\n    const bodyTerms = hardMatches(text, terms);\n    if (reason === 'non_permanent_engagement' && bodyTerms.length) {\n      return {\n        outOfScope: true,\n        exclusionReason: reason,\n        exclusionSignals: uniq(bodyTerms.map(term => reason + ':text:' + term))\n      };\n    }\n    bodySignals.push(...bodyTerms.map(term => reason + ':text:' + term));\n  }\n\n  if (!hasTargetTitle && bodySignals.length) {\n    const firstSignal = bodySignals[0];\n    return {\n      outOfScope: true,\n      exclusionReason: firstSignal.split(':')[0],\n      exclusionSignals: uniq(bodySignals)\n    };\n  }\n\n  return {\n    outOfScope: false,\n    exclusionReason: '',\n    exclusionSignals: []\n  };\n}\n\nfunction stripDescription(record) {\n  const { description, ...rest } = record;\n  return rest;\n}\n\nfunction inferRemotePolicy(text) {\n  const normalized = normalize(text);\n  if (containsTerm(normalized, 'remote') || containsTerm(normalized, 'remoto')) return 'remote';\n  if (containsTerm(normalized, 'hybrid') || containsTerm(normalized, 'ibrido')) return 'hybrid';\n  if (containsTerm(normalized, 'onsite') || containsTerm(normalized, 'on site') || containsTerm(normalized, 'in sede')) return 'onsite';\n  return 'unknown';\n}\n\nfunction inferSeniority(title, text) {\n  const titleMatches = matches(title, taxonomy.seniorityTerms);\n  if (titleMatches.some(term => ['cto', 'vp', 'director', 'head', 'direttore'].includes(term))) return 'executive/leadership';\n  if (titleMatches.some(term => ['manager', 'responsabile', 'lead', 'principal'].includes(term))) return 'leadership/senior';\n  if (matches(text, taxonomy.seniorityTerms).length) return 'senior/unclear';\n  return 'unknown';\n}\n\nfunction inferCompanySize(text) {\n  const startupSignals = matches(text, ['startup', 'scaleup', 'scale-up', 'early stage', 'seed', 'series a', 'founder', 'co-founder']);\n  const enterpriseSignals = matches(text, ['enterprise', 'corporate', 'multinational', 'global', 'banking group', 'large company', 'regulated']);\n  if (startupSignals.length && !enterpriseSignals.length) return { assumption: 'small/startup/scaleup', signals: startupSignals };\n  if (enterpriseSignals.length && !startupSignals.length) return { assumption: 'large/enterprise', signals: enterpriseSignals };\n  if (startupSignals.length && enterpriseSignals.length) return { assumption: 'mixed/unclear', signals: uniq([...startupSignals, ...enterpriseSignals]) };\n  return { assumption: 'unknown', signals: [] };\n}\n\nfunction detectRoleFamily(title, text) {\n  const ranked = taxonomy.roleFamilies.map(family => {\n    const aliasMatches = uniq([\n      ...matches(title, family.aliases).map(term => 'title:' + term),\n      ...matches(text, family.aliases).map(term => 'text:' + term)\n    ]);\n    const positiveMatches = matches(text, family.positive);\n    const negativeMatches = matches(text, family.negative);\n    const score = aliasMatches.filter(term => term.startsWith('title:')).length * 35\n      + aliasMatches.filter(term => term.startsWith('text:')).length * 16\n      + Math.min(25, positiveMatches.length * 4)\n      - Math.min(20, negativeMatches.length * 8);\n    return { family, aliasMatches, positiveMatches, negativeMatches, score };\n  }).sort((a, b) => b.score - a.score);\n\n  const best = ranked[0];\n  if (!best || best.score <= 0) {\n    return {\n      roleFamily: 'unknown',\n      roleFamilyId: 'unknown',\n      titleAliasConfidence: 0,\n      roleFamilySignals: []\n    };\n  }\n\n  return {\n    roleFamily: best.family.label,\n    roleFamilyId: best.family.id,\n    titleAliasConfidence: clamp(Math.min(100, best.score)),\n    roleFamilySignals: uniq([...best.aliasMatches, ...best.positiveMatches.slice(0, 8)]),\n    roleFamilyNegativeSignals: best.negativeMatches\n  };\n}\n\nfunction scoreRecord(record, options = {}) {\n  const capturedAt = record.capturedAt || new Date().toISOString();\n  const title = record.title || '';\n  const description = record.description || record.body || '';\n  const text = normalize([\n    title,\n    record.company,\n    record.location,\n    record.remotePolicy,\n    description,\n    asArray(record.tags).join(' ')\n  ].join(' '));\n  const titleText = normalize(title);\n  const targetTitleMatches = matches(titleText, taxonomy.targetTitleTerms);\n  const hasTargetTitle = targetTitleMatches.length > 0;\n  const hardGate = detectHardExclusion(titleText, text, hasTargetTitle);\n  const family = hardGate.outOfScope\n    ? { roleFamily: 'out_of_scope', roleFamilyId: 'out_of_scope', titleAliasConfidence: 0, roleFamilySignals: [], roleFamilyNegativeSignals: [] }\n    : detectRoleFamily(titleText, text);\n  const seniority = inferSeniority(titleText, text);\n  const companySize = inferCompanySize(text);\n  const remotePolicy = record.remotePolicy || inferRemotePolicy(text);\n  const excluded = matches(text, taxonomy.exclusions);\n  const hardTitleExclusions = matches(titleText, taxonomy.hardTitleExclusions);\n  const hasHardTitleExclusion = hardGate.outOfScope || (hardTitleExclusions.length > 0 && !hasTargetTitle);\n  const domainMatches = matches(text, taxonomy.domains);\n  const locationMatches = matches(text, taxonomy.locations);\n\n  const responsibilitySignals = matches(text, [\n    'ownership', 'owner', 'roadmap', 'architecture', 'architettura', 'delivery',\n    'team', 'teams', 'platform', 'piattaforma', 'governance', 'budget',\n    'stakeholder', 'vendor', 'modernization', 'modernizzazione'\n  ]);\n  const contextSignals = uniq([\n    ...domainMatches,\n    ...locationMatches,\n    ...companySize.signals,\n    remotePolicy !== 'unknown' ? remotePolicy : ''\n  ]);\n\n  const advantageMatches = {};\n  for (const [key, terms] of Object.entries(taxonomy.candidateAdvantage)) {\n    advantageMatches[key] = matches(text, terms);\n  }\n\n  const marketDemandScore = clamp(\n    (options.observedAlertVolume || 0)\n    + (options.externalJobCount || 0)\n    + (options.trendVelocity || 0)\n    + (options.macroTrendSupport || 0)\n    + Math.min(10, family.titleAliasConfidence * 0.1)\n  );\n\n  let profileFitScore = clamp(\n    family.titleAliasConfidence * 0.35\n    + Math.min(25, responsibilitySignals.length * 6)\n    + Math.min(20, domainMatches.length * 5)\n    + Math.min(20, contextSignals.length * 4)\n  );\n\n  let candidateAdvantageScore = clamp(\n    Math.min(25, advantageMatches.bankingOrRegulatedExperience.length * 7)\n    + Math.min(25, advantageMatches.startupAndProductProof.length * 7)\n    + Math.min(20, advantageMatches.platformAndCloudDepth.length * 5)\n    + Math.min(15, advantageMatches.leadershipAndDeliveryProof.length * 4)\n    + Math.min(15, advantageMatches.crossDomainTranslation.length * 4)\n  );\n\n  if (family.roleFamilyId === 'cto_fractional_founder' && companySize.assumption === 'small/startup/scaleup') {\n    profileFitScore = clamp(profileFitScore + 12);\n    candidateAdvantageScore = clamp(candidateAdvantageScore + 12);\n  }\n  if (family.roleFamilyId === 'cto_fractional_founder' && companySize.assumption === 'large/enterprise') {\n    profileFitScore = clamp(profileFitScore - 12);\n  }\n  if (!hasTargetTitle && family.titleAliasConfidence < 50) {\n    profileFitScore = clamp(profileFitScore - 30);\n    candidateAdvantageScore = clamp(candidateAdvantageScore - 15);\n  }\n  if (excluded.length || hasHardTitleExclusion) {\n    profileFitScore = hardGate.outOfScope ? 0 : clamp(profileFitScore - 70);\n    candidateAdvantageScore = hardGate.outOfScope ? 0 : clamp(candidateAdvantageScore - 50);\n  }\n\n  const applicationPriorityScore = hardGate.outOfScope ? 0 : clamp(\n    marketDemandScore * 0.25\n    + profileFitScore * 0.45\n    + candidateAdvantageScore * 0.30\n  );\n\n  let recommendedAction = 'ignore';\n  if (applicationPriorityScore >= 80 && profileFitScore >= 70) recommendedAction = 'apply';\n  else if (applicationPriorityScore >= 60) recommendedAction = 'inspect manually';\n  else if (applicationPriorityScore >= 40) recommendedAction = 'monitor';\n  if (excluded.length || hasHardTitleExclusion || (!hasTargetTitle && profileFitScore < 45)) recommendedAction = 'ignore';\n\n  const marketDemandSignals = uniq([\n    options.sourceKind || '',\n    hasTargetTitle ? 'target title match' : '',\n    family.titleAliasConfidence >= 50 ? 'title-alias confidence' : '',\n    options.externalJobCount ? 'public feed occurrence' : '',\n    options.observedAlertVolume ? 'observed alert volume' : ''\n  ]);\n  const profileFitSignals = uniq([\n    ...family.roleFamilySignals.slice(0, 8),\n    ...responsibilitySignals.slice(0, 8),\n    ...domainMatches.slice(0, 8)\n  ]);\n  const candidateAdvantageSignals = uniq(Object.entries(advantageMatches)\n    .filter(([, values]) => values.length)\n    .map(([key, values]) => key + ': ' + values.slice(0, 4).join(', ')));\n\n  const explanationParts = [\n    'observed title \"' + (title || 'n/a') + '\" from ' + (record.source || 'unknown source'),\n    'inferred role family ' + family.roleFamily,\n    'scores demand/profile/advantage/priority = ' + marketDemandScore + '/' + profileFitScore + '/' + candidateAdvantageScore + '/' + applicationPriorityScore\n  ];\n  if (profileFitSignals.length) explanationParts.push('fit signals: ' + profileFitSignals.slice(0, 6).join(', '));\n  if (candidateAdvantageSignals.length) explanationParts.push('advantage signals: ' + candidateAdvantageSignals.slice(0, 3).join('; '));\n  if (targetTitleMatches.length) explanationParts.push('target title signals: ' + targetTitleMatches.slice(0, 4).join(', '));\n  if (hardGate.outOfScope) explanationParts.push('excluded before scoring: ' + hardGate.exclusionReason);\n  if (excluded.length || hardTitleExclusions.length || hardGate.exclusionSignals.length) explanationParts.push('exclusion signals: ' + uniq([...excluded, ...hardTitleExclusions, ...hardGate.exclusionSignals]).join(', '));\n  if (companySize.assumption !== 'unknown') explanationParts.push('company size assumption: ' + companySize.assumption);\n\n  return {\n    source: record.source || '',\n    capturedAt,\n    title,\n    company: record.company || '',\n    location: record.location || '',\n    remotePolicy,\n    url: record.url || '',\n    description,\n    roleFamily: family.roleFamily,\n    roleFamilyId: family.roleFamilyId,\n    outOfScope: hardGate.outOfScope,\n    exclusionReason: hardGate.exclusionReason,\n    exclusionSignals: hardGate.exclusionSignals,\n    seniority,\n    companySizeAssumption: companySize.assumption,\n    companySizeSignals: companySize.signals,\n    marketDemandScore,\n    profileFitScore,\n    candidateAdvantageScore,\n    applicationPriorityScore,\n    marketDemandSignals,\n    profileFitSignals,\n    candidateAdvantageSignals,\n    recommendedAction,\n    explanation: explanationParts.join('; '),\n    tags: asArray(record.tags),\n    publishedAt: record.publishedAt || '',\n    emailId: record.emailId || '',\n    subject: record.subject || '',\n    from: record.from || ''\n  };\n}\n\nconst minPriorityScore = 40;\nconst limit = 20;\n\nfunction textFor(job) {\n  return normalize([\n    job.title,\n    job.company,\n    job.location,\n    job.description,\n    asArray(job.tags).join(' ')\n  ].join(' '));\n}\n\nfunction fromRemotive(payload) {\n  return asArray(payload.jobs).map(job => ({\n    source: 'Remotive',\n    capturedAt: new Date().toISOString(),\n    title: job.title || '',\n    company: job.company_name || '',\n    location: job.candidate_required_location || 'Remote',\n    remotePolicy: 'remote',\n    url: job.url || '',\n    description: job.description || '',\n    tags: asArray(job.tags),\n    publishedAt: job.publication_date || ''\n  }));\n}\n\nfunction fromArbeitnow(payload) {\n  const queryTerms = [\n    'cto', 'head of engineering', 'engineering manager', 'devops manager',\n    'cloud architect', 'platform engineer', 'database platform engineer',\n    'data infrastructure', 'devops lead', 'sre manager', 'ai lead',\n    'ai engineer', 'ai architect', 'llm engineer', 'data platform',\n    'founding engineer', 'technical product manager',\n    'digital transformation', 'enterprise architect', 'solution architect'\n  ];\n  return asArray(payload.data)\n    .map(job => ({\n      source: 'Arbeitnow',\n      capturedAt: new Date().toISOString(),\n      title: job.title || '',\n      company: job.company_name || '',\n      location: job.location || '',\n      remotePolicy: inferRemotePolicy([job.location, job.description].join(' ')),\n      url: job.url || '',\n      description: job.description || '',\n      tags: asArray(job.tags),\n      publishedAt: job.created_at || ''\n    }))\n    .filter(job => queryTerms.some(term => containsTerm(job.title, term)));\n}\n\nfunction fromRemoteOk(payload) {\n  const queryTerms = [\n    'cto', 'head of engineering', 'engineering manager', 'devops manager',\n    'cloud architect', 'platform engineer', 'database platform engineer',\n    'data infrastructure', 'devops lead', 'sre manager', 'ai lead',\n    'ai engineer', 'ai architect', 'llm engineer', 'data platform',\n    'founding engineer', 'technical product manager',\n    'digital transformation', 'enterprise architect', 'solution architect'\n  ];\n  return asArray(payload)\n    .filter(job => job && typeof job === 'object' && job.position)\n    .map(job => ({\n      source: 'RemoteOK',\n      capturedAt: new Date().toISOString(),\n      title: job.position || '',\n      company: job.company || '',\n      location: job.location || 'Remote',\n      remotePolicy: 'remote',\n      url: job.url || '',\n      description: job.description || '',\n      tags: asArray(job.tags),\n      publishedAt: job.date || ''\n    }))\n    .filter(job => queryTerms.some(term => containsTerm(job.title, term)));\n}\n\nconst remotive = $('Fetch Remotive').first().json;\nconst arbeitnow = $('Fetch Arbeitnow').first().json;\nconst remoteOk = $('Fetch RemoteOK').first().json;\n\nconst listings = [\n  ...fromRemotive(remotive),\n  ...fromArbeitnow(arbeitnow),\n  ...fromRemoteOk(remoteOk)\n];\n\nconst seen = new Set();\nconst deduped = [];\nfor (const listing of listings) {\n  const identity = normalize(listing.url || `${listing.source}:${listing.company}:${listing.title}:${listing.location}`);\n  if (seen.has(identity)) continue;\n  seen.add(identity);\n  deduped.push(listing);\n}\n\nconst sourceCounts = deduped.reduce((acc, job) => {\n  acc[job.source] = (acc[job.source] || 0) + 1;\n  return acc;\n}, {});\n\nconst scoredRecords = deduped.map(job => scoreRecord(job, {\n  sourceKind: 'public feed',\n  externalJobCount: Math.min(25, (sourceCounts[job.source] || 1) * 2),\n  observedAlertVolume: 0,\n  trendVelocity: 0,\n  macroTrendSupport: 0\n}));\n\nconst activeRecords = scoredRecords.filter(job => !job.outOfScope);\nconst excludedRecords = scoredRecords.filter(job => job.outOfScope);\n\nconst topMatches = activeRecords\n  .filter(job => job.applicationPriorityScore >= minPriorityScore && job.profileFitScore > 0 && job.recommendedAction !== 'ignore')\n  .sort((a, b) => b.applicationPriorityScore - a.applicationPriorityScore || b.profileFitScore - a.profileFitScore)\n  .slice(0, limit);\n\nconst topMatchKeys = new Set(topMatches.map(job => normalize(job.url || `${job.source}:${job.company}:${job.title}:${job.location}`)));\nconst monitorQueue = activeRecords\n  .filter(job => !topMatchKeys.has(normalize(job.url || `${job.source}:${job.company}:${job.title}:${job.location}`)))\n  .filter(job => job.applicationPriorityScore >= 20 && job.profileFitScore > 0 && job.recommendedAction !== 'ignore')\n  .sort((a, b) => b.applicationPriorityScore - a.applicationPriorityScore || b.profileFitScore - a.profileFitScore)\n  .slice(0, limit)\n  .map(stripDescription);\n\nconst generatedAt = new Date().toISOString();\nconst familySummary = activeRecords.reduce((acc, job) => {\n  const key = job.roleFamily || 'unknown';\n  if (!acc[key]) acc[key] = { count: 0, maxPriority: 0 };\n  acc[key].count += 1;\n  acc[key].maxPriority = Math.max(acc[key].maxPriority, job.applicationPriorityScore);\n  return acc;\n}, {});\n\nconst excludedSummary = excludedRecords.reduce((acc, job) => {\n  const key = job.exclusionReason || 'unknown';\n  if (!acc[key]) acc[key] = { count: 0, examples: [] };\n  acc[key].count += 1;\n  if (acc[key].examples.length < 5) {\n    acc[key].examples.push({\n      title: job.title,\n      company: job.company,\n      source: job.source,\n      url: job.url\n    });\n  }\n  return acc;\n}, {});\n\nconst compactTopMatches = topMatches.map(stripDescription);\n\nconst markdown = [\n  '# Job Search Radar',\n  '',\n  `Generated: ${generatedAt}`,\n  `Fetched listings: ${listings.length}`,\n  `Deduped listings: ${deduped.length}`,\n  `Matches: ${compactTopMatches.length}`,\n  `Excluded before scoring: ${excludedRecords.length}`,\n  '',\n  '## Role Family Summary',\n  '',\n  ...Object.entries(familySummary)\n    .sort((a, b) => b[1].maxPriority - a[1].maxPriority)\n    .map(([family, data]) => `- ${family}: ${data.count} records, max priority ${data.maxPriority}`),\n  '',\n  '## Excluded Summary',\n  '',\n  ...Object.entries(excludedSummary)\n    .sort((a, b) => b[1].count - a[1].count)\n    .map(([reason, data]) => `- ${reason}: ${data.count} records`),\n  '',\n  '## Top Matches',\n  '',\n  ...compactTopMatches.flatMap((job, index) => [\n    `### ${index + 1}. ${job.title} - ${job.company || 'n/a'}`,\n    '',\n    `- Action: ${job.recommendedAction}`,\n    `- Priority: ${job.applicationPriorityScore}`,\n    `- Demand/Profile/Advantage: ${job.marketDemandScore}/${job.profileFitScore}/${job.candidateAdvantageScore}`,\n    `- Role family: ${job.roleFamily}`,\n    `- Seniority: ${job.seniority}`,\n    `- Company size assumption: ${job.companySizeAssumption}`,\n    `- Source: ${job.source}`,\n    `- Location: ${job.location || 'n/a'}`,\n    `- URL: ${job.url || 'n/a'}`,\n    `- Explanation: ${job.explanation}`,\n    ''\n  ])\n].join('\\n');\n\nreturn [{\n  json: {\n    generatedAt,\n    totalFetched: listings.length,\n    dedupedCount: deduped.length,\n    matchCount: compactTopMatches.length,\n    minPriorityScore,\n    sourceCounts,\n    familySummary,\n    excludedSummary,\n    topMatches: compactTopMatches,\n    monitorQueue,\n    markdown\n  }\n}];\n"
+      },
+      "id": "d8d07ec7-5233-4b73-9083-7113e7de986b",
+      "name": "Rank Job Listings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fdbd79d5-d398-4f5a-8618-b5d75d36418f",
+              "name": "deliveryWebhookUrl",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "1b30c259-f799-4e2c-9307-744065ecbd79",
+              "name": "generatedAt",
+              "value": "={{ $json.generatedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "50246ae8-991e-4f62-b623-b4ea710fb355",
+              "name": "totalFetched",
+              "value": "={{ $json.totalFetched }}",
+              "type": "number"
+            },
+            {
+              "id": "db81ea42-3ba7-4313-85f6-35b4da0a06e7",
+              "name": "dedupedCount",
+              "value": "={{ $json.dedupedCount }}",
+              "type": "number"
+            },
+            {
+              "id": "20852eec-c4df-4ffd-8946-459fd36b0eab",
+              "name": "matchCount",
+              "value": "={{ $json.matchCount }}",
+              "type": "number"
+            },
+            {
+              "id": "2512ff62-d9ac-4aaa-9828-f53b338a3235",
+              "name": "topMatches",
+              "value": "={{ $json.topMatches }}",
+              "type": "array"
+            },
+            {
+              "id": "325308a5-5284-41df-b93a-cc41b70a7f98",
+              "name": "markdown",
+              "value": "={{ $json.markdown }}",
+              "type": "string"
+            },
+            {
+              "id": "familysummary-job-search",
+              "name": "familySummary",
+              "value": "={{ $json.familySummary }}",
+              "type": "object"
+            },
+            {
+              "id": "minpriorityscore-job-search",
+              "name": "minPriorityScore",
+              "value": "={{ $json.minPriorityScore }}",
+              "type": "number"
+            },
+            {
+              "id": "sourcecounts-job-search",
+              "name": "sourceCounts",
+              "value": "={{ $json.sourceCounts }}",
+              "type": "object"
+            },
+            {
+              "id": "excludedsummary-job-search",
+              "name": "excludedSummary",
+              "value": "={{ $json.excludedSummary }}",
+              "type": "object"
+            },
+            {
+              "id": "monitorqueue-job-search",
+              "name": "monitorQueue",
+              "value": "={{ $json.monitorQueue }}",
+              "type": "array"
+            },
+            {
+              "id": "telegramchatid-job-search",
+              "name": "telegramChatId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ccbc94f-c5e1-42a6-9339-5c251523fb36",
+      "name": "Delivery Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6fe426e8-4a30-46b1-b844-2523c03946b2",
+              "leftValue": "={{ $json.deliveryWebhookUrl }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2b4e44bc-f59a-4ae2-bb2f-f00662df401e",
+      "name": "Has Delivery Webhook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.deliveryWebhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { generatedAt: $json.generatedAt, totalFetched: $json.totalFetched, dedupedCount: $json.dedupedCount, matchCount: $json.matchCount, minPriorityScore: $json.minPriorityScore, sourceCounts: $json.sourceCounts, familySummary: $json.familySummary, excludedSummary: $json.excludedSummary, topMatches: $json.topMatches, monitorQueue: $json.monitorQueue, markdown: $json.markdown } }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "9fb80cec-630f-4119-826e-1ed2612359d7",
+      "name": "Send Report Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        980,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "no-delivery-deliveryStatus",
+              "name": "deliveryStatus",
+              "value": "skipped",
+              "type": "string"
+            },
+            {
+              "id": "no-delivery-deliveryReason",
+              "name": "deliveryReason",
+              "value": "deliveryWebhookUrl and telegramChatId are empty; report is available in this execution output",
+              "type": "string"
+            },
+            {
+              "id": "no-delivery-deliveryWebhookUrl",
+              "name": "deliveryWebhookUrl",
+              "value": "={{ $json.deliveryWebhookUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "no-delivery-generatedAt",
+              "name": "generatedAt",
+              "value": "={{ $json.generatedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "no-delivery-totalFetched",
+              "name": "totalFetched",
+              "value": "={{ $json.totalFetched }}",
+              "type": "number"
+            },
+            {
+              "id": "no-delivery-dedupedCount",
+              "name": "dedupedCount",
+              "value": "={{ $json.dedupedCount }}",
+              "type": "number"
+            },
+            {
+              "id": "no-delivery-matchCount",
+              "name": "matchCount",
+              "value": "={{ $json.matchCount }}",
+              "type": "number"
+            },
+            {
+              "id": "no-delivery-minPriorityScore",
+              "name": "minPriorityScore",
+              "value": "={{ $json.minPriorityScore }}",
+              "type": "number"
+            },
+            {
+              "id": "no-delivery-familySummary",
+              "name": "familySummary",
+              "value": "={{ $json.familySummary }}",
+              "type": "object"
+            },
+            {
+              "id": "no-delivery-excludedSummary",
+              "name": "excludedSummary",
+              "value": "={{ $json.excludedSummary }}",
+              "type": "object"
+            },
+            {
+              "id": "no-delivery-monitorQueue",
+              "name": "monitorQueue",
+              "value": "={{ $json.monitorQueue }}",
+              "type": "array"
+            },
+            {
+              "id": "no-delivery-topMatches",
+              "name": "topMatches",
+              "value": "={{ $json.topMatches }}",
+              "type": "array"
+            },
+            {
+              "id": "no-delivery-markdown",
+              "name": "markdown",
+              "value": "={{ $json.markdown }}",
+              "type": "string"
+            },
+            {
+              "id": "no-delivery-sourceCounts",
+              "name": "sourceCounts",
+              "value": "={{ $json.sourceCounts }}",
+              "type": "object"
+            },
+            {
+              "id": "no-delivery-telegramChatId",
+              "name": "telegramChatId",
+              "value": "={{ $json.telegramChatId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "no-delivery-configured-job-search-radar",
+      "name": "No Delivery Configured",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1260,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-telegram-chat-id",
+              "leftValue": "={{ $json.telegramChatId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-telegram-chat-job-search-radar",
+      "name": "Has Telegram Chat?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        980,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function decodeHtmlEntities(value) {\n  return String(value ?? '')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&#x27;/gi, \"'\")\n    .replace(/&#x2F;/gi, '/')\n    .replace(/&#(\\d+);/g, (_, code) => {\n      const point = Number(code);\n      return Number.isFinite(point) ? String.fromCodePoint(point) : '';\n    })\n    .replace(/&#x([0-9a-f]+);/gi, (_, code) => {\n      const point = Number.parseInt(code, 16);\n      return Number.isFinite(point) ? String.fromCodePoint(point) : '';\n    });\n}\n\nfunction text(value) {\n  const withoutTags = String(value ?? '')\n    .replace(/<br\\s*\\/?\\s*>/gi, '\\n')\n    .replace(/<\\/(p|div|li|h[1-6])>/gi, '\\n')\n    .replace(/<[^>]*>/g, '');\n\n  return decodeHtmlEntities(withoutTags)\n    .replace(/[<>]/g, '')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfunction oneLine(value) {\n  return text(value).replace(/\\s+/g, ' ').trim();\n}\n\nfunction compactUrl(value) {\n  return String(value || '').trim();\n}\n\nfunction shorten(value, maxLength) {\n  const clean = oneLine(value);\n  if (clean.length <= maxLength) return clean;\n  return clean.slice(0, maxLength - 1).trimEnd() + '...';\n}\n\nconst report = $input.first().json;\nconst generated = report.generatedAt ? new Date(report.generatedAt).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : 'n/a';\nconst topMatches = Array.isArray(report.topMatches) ? report.topMatches : [];\nconst excludedSummary = report.excludedSummary || {};\n\nconst matchLines = topMatches.length\n  ? topMatches.map((job, index) => {\n      const title = shorten(job.title || 'n/a', 90);\n      const company = shorten(job.company || 'n/a', 70);\n      const location = shorten(job.location || 'n/a', 70);\n      const priority = oneLine(job.applicationPriorityScore ?? 'n/a');\n      const action = oneLine(job.recommendedAction || 'n/a');\n      const url = compactUrl(job.url);\n      return [\n        (index + 1) + '. ' + title,\n        company + ' | ' + location,\n        'Priority: ' + priority + ' | Action: ' + action,\n        url\n      ].filter(Boolean).join('\\n');\n    }).join('\\n\\n')\n  : 'Nessun match sopra soglia.';\n\nconst excludedLines = Object.entries(excludedSummary)\n  .sort((a, b) => (b[1].count || 0) - (a[1].count || 0))\n  .map(([reason, data]) => '- ' + oneLine(reason).replace(/_/g, ' ') + ': ' + oneLine(data.count || 0))\n  .join('\\n') || 'Nessuna esclusione.';\n\nconst message = [\n  'Job Search Radar',\n  generated,\n  '',\n  'Fetched: ' + report.totalFetched,\n  'Deduped: ' + report.dedupedCount,\n  'Matches: ' + report.matchCount,\n  '',\n  'Top matches',\n  matchLines,\n  '',\n  'Excluded before scoring',\n  excludedLines\n].join('\\n');\n\nreturn [{\n  json: {\n    ...report,\n    telegramMessage: message.slice(0, 3900)\n  }\n}];"
+      },
+      "id": "build-telegram-message-job-search-radar",
+      "name": "Build Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.telegramChatId }}",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {}
+      },
+      "id": "send-report-to-telegram-job-search-radar",
+      "name": "Send Report to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        60
+      ],
+      "credentials": null
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "telegram-delivery-status",
+              "name": "deliveryStatus",
+              "value": "sent_telegram",
+              "type": "string"
+            },
+            {
+              "id": "telegram-delivery-reason",
+              "name": "deliveryReason",
+              "value": "report sent to Telegram",
+              "type": "string"
+            },
+            {
+              "id": "telegram-delivery-webhook-url",
+              "name": "deliveryWebhookUrl",
+              "value": "={{ $('Build Telegram Message').first().json.deliveryWebhookUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "telegram-delivery-chat-id",
+              "name": "telegramChatId",
+              "value": "={{ $('Build Telegram Message').first().json.telegramChatId }}",
+              "type": "string"
+            },
+            {
+              "id": "telegram-delivery-generated-at",
+              "name": "generatedAt",
+              "value": "={{ $('Build Telegram Message').first().json.generatedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "telegram-delivery-total-fetched",
+              "name": "totalFetched",
+              "value": "={{ $('Build Telegram Message').first().json.totalFetched }}",
+              "type": "number"
+            },
+            {
+              "id": "telegram-delivery-deduped-count",
+              "name": "dedupedCount",
+              "value": "={{ $('Build Telegram Message').first().json.dedupedCount }}",
+              "type": "number"
+            },
+            {
+              "id": "telegram-delivery-match-count",
+              "name": "matchCount",
+              "value": "={{ $('Build Telegram Message').first().json.matchCount }}",
+              "type": "number"
+            },
+            {
+              "id": "telegram-delivery-min-priority-score",
+              "name": "minPriorityScore",
+              "value": "={{ $('Build Telegram Message').first().json.minPriorityScore }}",
+              "type": "number"
+            },
+            {
+              "id": "telegram-delivery-source-counts",
+              "name": "sourceCounts",
+              "value": "={{ $('Build Telegram Message').first().json.sourceCounts }}",
+              "type": "object"
+            },
+            {
+              "id": "telegram-delivery-family-summary",
+              "name": "familySummary",
+              "value": "={{ $('Build Telegram Message').first().json.familySummary }}",
+              "type": "object"
+            },
+            {
+              "id": "telegram-delivery-excluded-summary",
+              "name": "excludedSummary",
+              "value": "={{ $('Build Telegram Message').first().json.excludedSummary }}",
+              "type": "object"
+            },
+            {
+              "id": "telegram-delivery-monitor-queue",
+              "name": "monitorQueue",
+              "value": "={{ $('Build Telegram Message').first().json.monitorQueue }}",
+              "type": "array"
+            },
+            {
+              "id": "telegram-delivery-top-matches",
+              "name": "topMatches",
+              "value": "={{ $('Build Telegram Message').first().json.topMatches }}",
+              "type": "array"
+            },
+            {
+              "id": "telegram-delivery-markdown",
+              "name": "markdown",
+              "value": "={{ $('Build Telegram Message').first().json.markdown }}",
+              "type": "string"
+            },
+            {
+              "id": "telegram-delivery-message",
+              "name": "telegramMessage",
+              "value": "={{ $('Build Telegram Message').first().json.telegramMessage }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "telegram-delivery-result-job-search-radar",
+      "name": "Telegram Delivery Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1820,
+        60
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Remotive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Remotive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Remotive": {
+      "main": [
+        [
+          {
+            "node": "Fetch Arbeitnow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Arbeitnow": {
+      "main": [
+        [
+          {
+            "node": "Fetch RemoteOK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch RemoteOK": {
+      "main": [
+        [
+          {
+            "node": "Rank Job Listings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank Job Listings": {
+      "main": [
+        [
+          {
+            "node": "Delivery Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delivery Settings": {
+      "main": [
+        [
+          {
+            "node": "Has Delivery Webhook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Delivery Webhook?": {
+      "main": [
+        [
+          {
+            "node": "Send Report Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Telegram Chat?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Telegram Chat?": {
+      "main": [
+        [
+          {
+            "node": "Build Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Delivery Configured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Send Report to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Report to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Telegram Delivery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "9dff997d-0cc6-4dcf-8e70-ed8918101b5e",
+  "triggerCount": 0,
+  "tags": [],
+  "id": "QKFOJVUHKTvqyUoE"
+}

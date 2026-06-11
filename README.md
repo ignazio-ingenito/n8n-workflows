@@ -23,7 +23,7 @@ scripts/    Script locali di validazione.
 - base URL dei webhook: `https://hooks.skunklabs.uk`
 - namespace Kubernetes: `apps`
 - manifest homelab: `/home/iingenito/projects/personal/homelab/gitops/apps/n8n`
-- immagine n8n nel cluster: `n8nio/n8n:2.23.1`
+- immagine n8n osservata nel cluster il 2026-06-11: `n8nio/n8n:2.26.2`
 - persistenza: PostgreSQL via CNPG più PVC `n8n-data`
 
 ## Regole per i workflow
@@ -85,6 +85,48 @@ Telegram e una pagina di approvazione su `hooks.skunklabs.uk`:
   con il link pubblico dell'articolo.
 - Un secondo workflow schedulato controlla i post già pubblicati e demota a
   `featured: 0` quelli con `expires` scaduto.
+
+## Job Search Radar
+
+`workflows/job-search-radar.json` recupera annunci pubblici da Remotive,
+Arbeitnow e RemoteOK, li normalizza e produce un report Markdown/JSON
+nell'output del workflow. La logica strategica di profilo, role family, query
+seed e scoring non vive qui: resta come source of truth nel repo
+`/home/iingenito/projects/personal/resume`.
+
+`workflows/job-search-email-alerts.json` legge gli alert email di lavoro
+arrivati su Gmail, inclusi LinkedIn e Indeed, estrae titolo/link/testo e applica
+lo stesso flusso operativo. Il workflow non fa scraping LinkedIn: la raccolta
+passa da ricerche salvate e job alert.
+
+Il workflow non contiene credenziali. Dopo l'import puoi configurare nel nodo
+`Delivery Settings` una `deliveryWebhookUrl` per inviare il report a un endpoint
+esterno, oppure un `telegramChatId` per inviare un digest Telegram. Se entrambi
+restano vuoti, il workflow passa dal nodo `No Delivery Configured` e produce
+comunque il report nell'esecuzione n8n, con `deliveryStatus: skipped`. Per
+Telegram va associata manualmente la credenziale Telegram al nodo
+`Send Report to Telegram` dopo l'import.
+
+Per il workflow email va associata manualmente una credenziale Gmail ai nodi
+`Scan Job Alert Emails` e `Get Alert Email` dopo l'import.
+
+Source of truth strategica:
+
+```text
+/home/iingenito/projects/personal/resume/profile/positioning.md
+/home/iingenito/projects/personal/resume/profile/target-roles.md
+/home/iingenito/projects/personal/resume/job-search/market-observatory-spec.md
+/home/iingenito/projects/personal/resume/job-search/linkedin-query-seeds.md
+/home/iingenito/projects/personal/resume/job-search/italy-market-sources.md
+/home/iingenito/projects/personal/resume/job-search/scoring-model.md
+/home/iingenito/projects/personal/resume/automations/n8n-workflows.md
+```
+
+Handoff operativo:
+
+```text
+docs/2026-06-11-job-search-radar-handoff.md
+```
 
 ## Validazione
 
