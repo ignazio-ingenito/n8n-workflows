@@ -154,6 +154,8 @@ For `Job Search Email Alerts`, also attach the Gmail OAuth credential to:
 - `Scan Job Alert Emails`
 - `Get Alert Email`
 
+`Job Search Email Alerts` can also deliver the compact digest to Telegram. Configure `telegramChatId` in `Delivery Settings` and attach the Telegram credential to `Send Report to Telegram`. Webhook delivery still wins when `deliveryWebhookUrl` is set. The email workflow uses the same current calibration as the public radar: standalone Product Engineer/full-stack IC roles and non-permanent engagement models are filtered before scoring.
+
 ## Verification
 
 Local repository validation:

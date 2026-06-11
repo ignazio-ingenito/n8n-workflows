@@ -110,6 +110,8 @@ Telegram va associata manualmente la credenziale Telegram al nodo
 Per il workflow email va associata manualmente una credenziale Gmail ai nodi
 `Scan Job Alert Emails` e `Get Alert Email` dopo l'import.
 
+Per usare Telegram anche sugli alert email, configura `telegramChatId` nel nodo `Delivery Settings` di `Job Search Email Alerts` e associa la credenziale Telegram al nodo `Send Report to Telegram`. Il workflow email usa le stesse esclusioni operative del radar pubblico per Product Engineer standalone e modelli non permanent.
+
 Source of truth strategica:
 
 ```text

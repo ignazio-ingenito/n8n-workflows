@@ -39,11 +39,8 @@
       "parameters": {
         "operation": "get",
         "dataTableId": {
-          "__rl": true,
-          "value": "FpdECdgoM38gPoS4",
-          "mode": "list",
-          "cachedResultName": "cap-docs",
-          "cachedResultUrl": "/projects/18sXDLbR6Pr24pIY/datatables/FpdECdgoM38gPoS4"
+          "mode": "name",
+          "value": "cap-docs"
         },
         "filters": {
           "conditions": [
@@ -98,6 +95,36 @@
       ],
       "id": "ab4f56f2-783f-4ec3-9201-80c9e120a8b2",
       "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "cap-docs",
+        "columns": {
+          "column": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "lastExecution",
+              "type": "date"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -528
+      ],
+      "id": "af5ff0e8-e9c7-452f-98c2-4dfd77a6d686",
+      "name": "Ensure cap-docs table"
     },
     {
       "parameters": {
@@ -188,11 +215,8 @@
       "parameters": {
         "operation": "upsert",
         "dataTableId": {
-          "__rl": true,
-          "value": "FpdECdgoM38gPoS4",
-          "mode": "list",
-          "cachedResultName": "cap-docs",
-          "cachedResultUrl": "/projects/18sXDLbR6Pr24pIY/datatables/FpdECdgoM38gPoS4"
+          "mode": "name",
+          "value": "cap-docs"
         },
         "matchType": "allConditions",
         "filters": {
@@ -526,11 +550,8 @@
       "parameters": {
         "operation": "deleteRows",
         "dataTableId": {
-          "__rl": true,
-          "value": "FpdECdgoM38gPoS4",
-          "mode": "list",
-          "cachedResultName": "cap-docs",
-          "cachedResultUrl": "/projects/18sXDLbR6Pr24pIY/datatables/FpdECdgoM38gPoS4"
+          "mode": "name",
+          "value": "cap-docs"
         },
         "matchType": "allConditions",
         "filters": {
@@ -693,6 +714,17 @@
       ]
     },
     "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ensure cap-docs table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure cap-docs table": {
       "main": [
         [
           {
