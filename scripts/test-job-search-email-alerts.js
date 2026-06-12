@@ -168,6 +168,7 @@ async function runMergeNodeUnitChecks(workflow) {
     url: 'https://www.linkedin.com/comm/jobs/view/4424508735',
     emailId: 'unit#1',
     source: 'LinkedIn alert email',
+    alertQuery: 'Platform Engineering Lead',
     dataPoor: true,
     enrichmentStatus: 'not_attempted',
     recommendedAction: 'inspect manually',
@@ -210,6 +211,9 @@ async function runMergeNodeUnitChecks(workflow) {
   }
   if (record?.enrichmentStatus !== 'login_wall') {
     throw new Error(`Expected LinkedIn login page to become enrichmentStatus=login_wall, got "${record?.enrichmentStatus}"`);
+  }
+  if (!Array.isArray(report.queryHealth) || report.queryHealth[0]?.query !== 'Platform Engineering Lead') {
+    throw new Error('Merge Enriched Alert Report must recompute queryHealth from merged records');
   }
 }
 
