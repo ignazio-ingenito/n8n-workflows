@@ -122,6 +122,12 @@
               "type": "object"
             },
             {
+              "id": "queryhealth-job-search",
+              "name": "queryHealth",
+              "value": "={{ $json.queryHealth }}",
+              "type": "array"
+            },
+            {
               "id": "minpriorityscore-job-search",
               "name": "minPriorityScore",
               "value": "={{ $json.minPriorityScore }}",

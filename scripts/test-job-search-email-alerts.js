@@ -49,6 +49,9 @@ function assertEmailDigestDelivery(workflow) {
   if (!settingNames.has('digestEmailTo')) {
     throw new Error('Delivery Settings must expose digestEmailTo for optional email delivery');
   }
+  if (!settingNames.has('queryHealth')) {
+    throw new Error('Delivery Settings must preserve queryHealth for digest rendering');
+  }
   const condition = hasDigestEmail.parameters?.conditions?.conditions?.[0];
   if (condition?.leftValue !== '={{ $json.digestEmailTo }}' || condition?.operator?.operation !== 'notEmpty') {
     throw new Error('Has Digest Email? must route only when digestEmailTo is not empty');
