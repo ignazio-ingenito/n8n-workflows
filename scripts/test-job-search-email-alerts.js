@@ -41,6 +41,32 @@ function assertTelegramNodeUsesHtmlParseMode(workflow) {
   }
 }
 
+function assertEmailDigestDelivery(workflow) {
+  const settings = workflowNode(workflow, 'Delivery Settings');
+  const hasDigestEmail = workflowNode(workflow, 'Has Digest Email?');
+  const sendEmail = workflowNode(workflow, 'Send Digest Email');
+  const settingNames = new Set((settings.parameters?.assignments?.assignments || []).map(assignment => assignment.name));
+  if (!settingNames.has('digestEmailTo')) {
+    throw new Error('Delivery Settings must expose digestEmailTo for optional email delivery');
+  }
+  const condition = hasDigestEmail.parameters?.conditions?.conditions?.[0];
+  if (condition?.leftValue !== '={{ $json.digestEmailTo }}' || condition?.operator?.operation !== 'notEmpty') {
+    throw new Error('Has Digest Email? must route only when digestEmailTo is not empty');
+  }
+  if (sendEmail.type !== 'n8n-nodes-base.gmail' || sendEmail.parameters?.operation !== 'send') {
+    throw new Error('Send Digest Email must use Gmail send operation');
+  }
+  if (sendEmail.parameters?.sendTo !== '={{ $json.digestEmailTo }}') {
+    throw new Error('Send Digest Email must address digestEmailTo from Delivery Settings');
+  }
+  if (sendEmail.parameters?.emailType !== 'html' || sendEmail.parameters?.message !== '={{ $json.emailHtml }}') {
+    throw new Error('Send Digest Email must send the generated HTML digest');
+  }
+  if (sendEmail.parameters?.options?.appendAttribution !== false) {
+    throw new Error('Send Digest Email must disable n8n attribution');
+  }
+}
+
 function assertGmailBacklogScan(workflow) {
   const schedule = workflowNode(workflow, 'Schedule Trigger');
   if (schedule.type !== 'n8n-nodes-base.scheduleTrigger') {
@@ -67,6 +93,7 @@ function validateWorkflowGraph(workflow) {
     throw new Error(`Has Enrichment Requests? must use n8n number operation "gt", got "${operation}"`);
   }
   assertTelegramNodeUsesHtmlParseMode(workflow);
+  assertEmailDigestDelivery(workflow);
   assertGmailBacklogScan(workflow);
 }
 
@@ -129,6 +156,10 @@ async function runTelegramNode(code, report) {
   return runCode(code, [{ json: report }]);
 }
 
+async function runEmailDigestNode(code, report) {
+  return runCode(code, [{ json: report }]);
+}
+
 async function runMergeNodeUnitChecks(workflow) {
   const mergeCode = codeNode(workflow, 'Merge Enriched Alert Report');
   const baseRecord = {
@@ -179,6 +210,59 @@ async function runMergeNodeUnitChecks(workflow) {
   }
   if (record?.enrichmentStatus !== 'login_wall') {
     throw new Error(`Expected LinkedIn login page to become enrichmentStatus=login_wall, got "${record?.enrichmentStatus}"`);
+  }
+}
+
+async function runEmailDigestNodeUnitChecks(workflow) {
+  const emailCode = codeNode(workflow, 'Build Email Digest');
+  const report = {
+    generatedAt: '2026-06-12T00:00:00.000Z',
+    emailCount: 2,
+    parsedCount: 2,
+    matches: [{
+      title: 'AI & Data Manager',
+      company: 'Costa Crociere S.p.A.',
+      url: 'https://www.linkedin.com/comm/jobs/view/1',
+      source: 'LinkedIn alert email',
+      recommendedAction: 'inspect manually',
+      applicationPriorityScore: 69,
+      profileFitScore: 60,
+      enrichmentStatus: 'login_wall'
+    }],
+    records: [
+      {
+        title: 'Engineering Manager',
+        company: 'Subito',
+        url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
+        source: 'LinkedIn alert email',
+        recommendedAction: 'ignore',
+        applicationPriorityScore: 24,
+        profileFitScore: 30
+      },
+      {
+        title: 'Engineering Manager',
+        company: 'Subito',
+        url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
+        source: 'LinkedIn alert email',
+        recommendedAction: 'ignore',
+        applicationPriorityScore: 24,
+        profileFitScore: 30
+      }
+    ]
+  };
+  const result = await runEmailDigestNode(emailCode, report);
+  if (!/Job Search Email Alerts - 2026-06-12 00:00 UTC - 1 da valutare/.test(result.emailSubject || '')) {
+    throw new Error('Build Email Digest must generate a useful subject with the review count');
+  }
+  if (!/Email messages: 2/.test(result.emailText || '') || !/Jobs parsed: 2/.test(result.emailText || '')) {
+    throw new Error('Build Email Digest must include email and job counts in the plain text body');
+  }
+  if (!/AI &amp; Data Manager/.test(result.emailHtml || '')) {
+    throw new Error('Build Email Digest must HTML-escape job titles in the HTML body');
+  }
+  const engineeringManagerOccurrences = (result.emailText.match(/Engineering Manager - Subito/g) || []).length;
+  if (engineeringManagerOccurrences !== 1) {
+    throw new Error('Build Email Digest must deduplicate Below threshold records by URL or title');
   }
 }
 
@@ -345,6 +429,7 @@ async function main() {
   const workflow = readJson(workflowPath);
   validateWorkflowGraph(workflow);
   await runMergeNodeUnitChecks(workflow);
+  await runEmailDigestNodeUnitChecks(workflow);
   await runTelegramNodeUnitChecks(workflow);
   const parseCode = codeNode(workflow, 'Parse and Score Alerts');
   const telegramCode = codeNode(workflow, 'Build Telegram Message');

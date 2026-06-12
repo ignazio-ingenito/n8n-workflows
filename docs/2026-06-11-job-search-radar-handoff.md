@@ -111,13 +111,13 @@ recommendedAction to keep non-target roles out of top matches.
 
 ## Delivery
 
-The workflow does not commit any email, Telegram, Slack, or API credential. Telegram delivery uses a Telegram node credential attached manually in the n8n UI.
+The workflow does not commit any email, Telegram, Slack, or API credential. Telegram delivery uses a Telegram node credential attached manually in the n8n UI; email digest delivery uses a Gmail credential attached manually in the n8n UI.
 
 To send either report somewhere after import:
 
 1. Open `Job Search Radar` or `Job Search Email Alerts` in n8n.
 2. Edit node `Delivery Settings`.
-3. Set `deliveryWebhookUrl` to the endpoint that should receive the JSON payload, or set `telegramChatId` to send a compact Telegram digest instead. If both are set, webhook delivery wins.
+3. Set `deliveryWebhookUrl` to the endpoint that should receive the JSON payload, set `digestEmailTo` to send a compact Gmail digest, or set `telegramChatId` to send a compact Telegram digest. Delivery priority is webhook, then email, then Telegram.
 
    ```json
    {
@@ -143,15 +143,15 @@ delivery payload to keep executions readable; review `excludedSummary`, compact
 older email-alert shape and reports `parsedCount` and `matches` instead of
 `totalFetched` and `topMatches`.
 
-If `deliveryWebhookUrl` is empty and `telegramChatId` is set, the workflow routes through `Send Report to Telegram` and returns the report with `deliveryStatus: sent_telegram`. If both are empty, it routes through `No Delivery Configured` and still returns a ranked report in the execution output with `deliveryStatus: skipped`.
+If `deliveryWebhookUrl` is empty and `digestEmailTo` is set, the workflow routes through `Send Digest Email` and returns the report with `deliveryStatus: sent_email`. If email is also empty and `telegramChatId` is set, it routes through `Send Report to Telegram` and returns `deliveryStatus: sent_telegram`. If all delivery settings are empty, it routes through `No Delivery Configured` and still returns a ranked report in the execution output with `deliveryStatus: skipped`.
 
 For `Job Search Radar`, attach the Telegram credential to `Send Report to Telegram` when using Telegram delivery.
 
 The Telegram digest is generated as plain text for the user, but the n8n Telegram node exposes HTML as its parse mode default. The formatter strips HTML tags, decodes common HTML entities while building the readable text, then HTML-escapes the final Telegram payload so titles like `AI & Data Manager` do not fail with Telegram entity parsing errors. Keep Telegram `additionalFields.appendAttribution` set to `false` so n8n does not append attribution text to outbound messages. Do not use Telegram attribution or markup settings as formatting workarounds.
 
-For `Job Search Email Alerts`, also attach the Gmail OAuth credential to `Scan Job Alert Emails`.
+For `Job Search Email Alerts`, also attach the Gmail OAuth credential to `Scan Job Alert Emails`; attach a Gmail credential to `Send Digest Email` only when using email delivery.
 
-`Job Search Email Alerts` can also deliver the compact digest to Telegram. Configure `telegramChatId` in `Delivery Settings` and attach the Telegram credential to `Send Report to Telegram`. Webhook delivery still wins when `deliveryWebhookUrl` is set. The email workflow uses the same current calibration as the public radar: standalone Product Engineer/full-stack IC roles and non-permanent engagement models are filtered before scoring.
+`Job Search Email Alerts` can also deliver the compact digest by email or Telegram. Configure `digestEmailTo` in `Delivery Settings` and attach the Gmail credential to `Send Digest Email` for email delivery. Configure `telegramChatId` and attach the Telegram credential to `Send Report to Telegram` for Telegram delivery. Webhook delivery still wins when `deliveryWebhookUrl` is set, and email delivery wins over Telegram when both are set. The email workflow uses the same current calibration as the public radar: standalone Product Engineer/full-stack IC roles and non-permanent engagement models are filtered before scoring.
 
 Job Search Email Alerts also attempts bounded enrichment for data-poor manual-inspection LinkedIn alert records. `Prepare Enrichment Requests` emits at most three canonical job-detail URLs per execution, `Fetch Job Detail` retrieves them, and `Merge Enriched Alert Report` appends useful page text when available. The workflow keeps the original data-poor decision when the fetch is not useful. Enrichment status is reported as `fetched` for useful job pages, `login_wall` for LinkedIn login/checkpoint HTML, or `empty`/`failed` when no useful detail text is available. The workflow stores only canonical job URLs in workflow JSON; LinkedIn tracking query strings must stay out of committed workflow files.
 

@@ -101,17 +101,24 @@ passa da ricerche salvate e job alert.
 
 Il workflow non contiene credenziali. Dopo l'import puoi configurare nel nodo
 `Delivery Settings` una `deliveryWebhookUrl` per inviare il report a un endpoint
-esterno, oppure un `telegramChatId` per inviare un digest Telegram. Se entrambi
-restano vuoti, il workflow passa dal nodo `No Delivery Configured` e produce
+esterno, un `digestEmailTo` per inviare un digest via Gmail, oppure un
+`telegramChatId` per inviare un digest Telegram. La priorità è webhook, email,
+poi Telegram. Se tutti restano vuoti, il workflow passa dal nodo `No Delivery Configured` e produce
 comunque il report nell'esecuzione n8n, con `deliveryStatus: skipped`. Per
 Telegram va associata manualmente la credenziale Telegram al nodo
-`Send Report to Telegram` dopo l'import.
+`Send Report to Telegram` dopo l'import. Per il digest email va associata
+manualmente una credenziale Gmail al nodo `Send Digest Email`.
 
 Per il workflow email va associata manualmente una credenziale Gmail al nodo
 `Scan Job Alert Emails` dopo l'import. Il nodo scansiona le email non lette
 correnti, quindi copre anche il backlog unread entro il limite configurato.
 
-Per usare Telegram anche sugli alert email, configura `telegramChatId` nel nodo `Delivery Settings` di `Job Search Email Alerts` e associa la credenziale Telegram al nodo `Send Report to Telegram`. Il workflow email usa le stesse esclusioni operative del radar pubblico per Product Engineer standalone e modelli non permanent.
+Per usare il digest email sugli alert email, configura `digestEmailTo` nel nodo
+`Delivery Settings` di `Job Search Email Alerts` e associa la credenziale Gmail
+al nodo `Send Digest Email`. Per usare Telegram, configura `telegramChatId` e
+associa la credenziale Telegram al nodo `Send Report to Telegram`. Il workflow
+email usa le stesse esclusioni operative del radar pubblico per Product Engineer
+standalone e modelli non permanent.
 
 Source of truth strategica:
 
