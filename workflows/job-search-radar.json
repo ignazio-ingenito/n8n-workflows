@@ -418,7 +418,9 @@
         "operation": "sendMessage",
         "chatId": "={{ $json.telegramChatId }}",
         "text": "={{ $json.telegramMessage }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "id": "send-report-to-telegram-job-search-radar",
       "name": "Send Report to Telegram",

@@ -147,7 +147,7 @@ If `deliveryWebhookUrl` is empty and `telegramChatId` is set, the workflow route
 
 For `Job Search Radar`, attach the Telegram credential to `Send Report to Telegram` when using Telegram delivery.
 
-The Telegram digest is generated as plain text: the formatter strips HTML tags and decodes common HTML entities before passing the text to the Telegram node. Keep Telegram `parseMode` unset. If the n8n UI exposes an attribution toggle for this node, do not use it as a formatting workaround; the workflow message should remain valid with no Telegram markup parsing.
+The Telegram digest is generated as plain text: the formatter strips HTML tags and decodes common HTML entities before passing the text to the Telegram node. Keep Telegram `parseMode` unset. Keep Telegram `additionalFields.appendAttribution` set to `false` so n8n does not append attribution text to outbound messages. Do not use Telegram attribution or markup settings as formatting workarounds; the workflow message should remain valid with no Telegram markup parsing.
 
 For `Job Search Email Alerts`, also attach the Gmail OAuth credential to:
 

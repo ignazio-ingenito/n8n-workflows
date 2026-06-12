@@ -163,7 +163,8 @@
         "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.message }}",
         "additionalFields": {
-          "parseMode": "HTML"
+          "parseMode": "HTML",
+          "appendAttribution": false
         }
       },
       "onError": "continueRegularOutput",
@@ -333,7 +334,10 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{ $('Build commit payloads').first().json.chatId }}",
-        "text": "={{ `Pubblicato su Baialupo: ${$('Build commit payloads').first().json.title}\\n${$('Build commit payloads').first().json.publicUrl}` }}"
+        "text": "={{ `Pubblicato su Baialupo: ${$('Build commit payloads').first().json.title}\\n${$('Build commit payloads').first().json.publicUrl}` }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "onError": "continueRegularOutput",
       "type": "n8n-nodes-base.telegram",
