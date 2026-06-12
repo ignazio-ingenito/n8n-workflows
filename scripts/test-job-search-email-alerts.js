@@ -300,6 +300,9 @@ async function runEmailDigestNodeUnitChecks(workflow) {
   if (!/1\. AI &amp; Data Manager/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must HTML-escape job titles and render explicit item numbers in the HTML body');
   }
+  if (!/fonts\.googleapis\.com\/css2\?family=Montserrat/.test(result.emailHtml || '') || !/font-family:Montserrat,Arial,sans-serif/.test(result.emailHtml || '')) {
+    throw new Error('Build Email Digest must request Google Montserrat and use it as the primary email font');
+  }
   if (!/Query Health/.test(result.emailText || '') || !/Alert: AI Lead/.test(result.emailText || '') || !/AI Lead - strong/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must include alert query health and per-job alert query context');
   }
