@@ -97,6 +97,84 @@ async function runTelegramNode(code, report) {
   return runCode(code, [{ json: report }]);
 }
 
+async function runMergeNodeUnitChecks(workflow) {
+  const mergeCode = codeNode(workflow, 'Merge Enriched Alert Report');
+  const baseRecord = {
+    title: 'Director of Engineering',
+    company: 'Jobgether',
+    url: 'https://www.linkedin.com/comm/jobs/view/4424508735',
+    emailId: 'unit#1',
+    source: 'LinkedIn alert email',
+    dataPoor: true,
+    enrichmentStatus: 'not_attempted',
+    recommendedAction: 'inspect manually',
+    applicationPriorityScore: 45,
+    profileFitScore: 22,
+    marketDemandScore: 40,
+    candidateAdvantageScore: 0,
+    roleFamily: 'Engineering Leadership',
+    seniority: 'executive/leadership',
+    companySizeAssumption: 'unknown',
+    explanation: 'unit record'
+  };
+  const baseReport = {
+    generatedAt: '2026-06-12T00:00:00.000Z',
+    parsedCount: 1,
+    matchCount: 1,
+    minPriorityScore: 35,
+    familySummary: {},
+    records: [baseRecord],
+    matches: [baseRecord],
+    markdown: ''
+  };
+  const preparedItems = [{
+    json: {
+      report: baseReport,
+      emailId: 'unit#1',
+      url: baseRecord.url,
+      title: baseRecord.title,
+      company: baseRecord.company
+    }
+  }];
+  const loginWallHtml = '<html><head><title>LinkedIn Login, Sign in | LinkedIn</title><meta name="pageKey" content="d_checkpoint_lg_consumer_login"></head><body><form class="login__form" action="/checkpoint/lg/login-submit"><input name="session_redirect" value="/jobs/view/4424508735"></form></body></html>';
+  const report = await runCode(mergeCode, [{ json: { jobDetailHtml: loginWallHtml } }], {
+    'Prepare Enrichment Requests': preparedItems
+  });
+  const record = report.records?.[0];
+  if (report.parsedCount !== 1 || report.records?.length !== 1) {
+    throw new Error('Merge Enriched Alert Report must preserve the base report when HTTP output omits input data');
+  }
+  if (record?.enrichmentStatus !== 'login_wall') {
+    throw new Error(`Expected LinkedIn login page to become enrichmentStatus=login_wall, got "${record?.enrichmentStatus}"`);
+  }
+}
+
+async function runTelegramNodeUnitChecks(workflow) {
+  const telegramCode = codeNode(workflow, 'Build Telegram Message');
+  const report = {
+    generatedAt: '2026-06-12T00:00:00.000Z',
+    parsedCount: 1,
+    matches: [{
+      title: 'Chief Technology Officer',
+      company: 'WeHunt',
+      url: 'https://www.linkedin.com/comm/jobs/view/1',
+      source: 'LinkedIn alert email',
+      recommendedAction: 'inspect manually',
+      applicationPriorityScore: 69,
+      profileFitScore: 60,
+      enrichmentStatus: 'fetched'
+    }],
+    records: []
+  };
+  const result = await runTelegramNode(telegramCode, report);
+  if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. Chief Technology Officer/.test(result.telegramMessage || '')) {
+    throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section');
+  }
+  if (/Manual inspection: 1/.test(result.telegramMessage || '')) {
+    throw new Error('High interest records must not also be counted as manual inspection');
+  }
+}
+
 async function runEnrichmentGraph(workflow, report, fixture) {
   const requests = Array.isArray(report.enrichmentRequests) ? report.enrichmentRequests : [];
   if (!requests.length) return report;
@@ -201,6 +279,8 @@ function evaluate(filePath, report, telegramReport) {
 async function main() {
   const workflow = readJson(workflowPath);
   validateWorkflowGraph(workflow);
+  await runMergeNodeUnitChecks(workflow);
+  await runTelegramNodeUnitChecks(workflow);
   const parseCode = codeNode(workflow, 'Parse and Score Alerts');
   const telegramCode = codeNode(workflow, 'Build Telegram Message');
   const files = fixtureFiles(fixtureDir);
