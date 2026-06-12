@@ -1,0 +1,73 @@
+{
+  "id": "fixture-linkedin-italia-03",
+  "source": "LinkedIn alert email",
+  "query": "Italia",
+  "subject": "Ignazio: il tuo avviso di offerte di lavoro per Italia (Italia) è stato creato",
+  "from": "jobalerts-noreply@linkedin.com",
+  "date": "2026-06-12T07:33:22.000Z",
+  "textPlain": "Il tuo avviso di offerte di lavoro è stato creato: Italia (Italia).\nRiceverai notifiche quando vengono pubblicate nuove offerte di lavoro che corrispondono alle tue preferenze di ricerca.\n\nGlobal Professional Maintenance Manager\nFerrero\nAlba, Piemonte, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4427623001\n\n---------------------------------------------------------\n\nDevops\nZucchetti\nLodi, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4426611336\n\n---------------------------------------------------------\n\nDevOps Engineer\nStema\nTorino, Piemonte, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4426625016\n\n---------------------------------------------------------\n\nDevops Engineer\nLynx S.p.A.\nMilano, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4425492407\n\n---------------------------------------------------------\n\nTECHNICAL MANAGER\nMagnera Corporation\nTerno d'Isola, Lombardia, Italia\n\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4427530850\n\n---------------------------------------------------------\n\nTechnical Senior Advisor\nABB\nBergamo, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4425879796\n",
+  "textHtml": "",
+  "expected": {
+    "jobCount": 6,
+    "jobs": [
+      {
+        "title": "Global Professional Maintenance Manager",
+        "company": "Ferrero",
+        "location": "Alba, Piemonte, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4427623001",
+        "jobId": "4427623001",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "Devops",
+        "company": "Zucchetti",
+        "location": "Lodi, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4426611336",
+        "jobId": "4426611336",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "DevOps Engineer",
+        "company": "Stema",
+        "location": "Torino, Piemonte, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4426625016",
+        "jobId": "4426625016",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "Devops Engineer",
+        "company": "Lynx S.p.A.",
+        "location": "Milano, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4425492407",
+        "jobId": "4425492407",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "TECHNICAL MANAGER",
+        "company": "Magnera Corporation",
+        "location": "Terno d'Isola, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4427530850",
+        "jobId": "4427530850",
+        "flags": []
+      },
+      {
+        "title": "Technical Senior Advisor",
+        "company": "ABB",
+        "location": "Bergamo, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4425879796",
+        "jobId": "4425879796",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "source": "gmail-job-alerts-2026-06-12.json",
+  "generatedAt": "2026-06-12T16:10:49.643Z",
+  "fixtureCount": 8,
+  "totalJobs": 48,
+  "fixtures": [
+    {
+      "file": "01-chief-technology-officer.sanitized.json",
+      "query": "Chief Technology Officer",
+      "date": "2026-06-12T15:33:17.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4426624681",
+        "4424774317",
+        "4426608715",
+        "4422256309",
+        "4425458772",
+        "4423674201"
+      ],
+      "titles": [
+        "Chief Technology Officer",
+        "Technical Director Energy Transition (Italy)",
+        "Field CTO",
+        "Head of Connectivity",
+        "CALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)",
+        "Head of IT (Rif. 1136)"
+      ]
+    },
+    {
+      "file": "02-cto.sanitized.json",
+      "query": "CTO",
+      "date": "2026-06-12T09:33:18.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4426624681",
+        "4424774317",
+        "4425450727",
+        "4426608715",
+        "4422256309",
+        "4425458772"
+      ],
+      "titles": [
+        "Chief Technology Officer",
+        "Technical Director Energy Transition (Italy)",
+        "CORPORATE ENGINEERING DIRECTOR",
+        "Field CTO",
+        "Head of Connectivity",
+        "CALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)"
+      ]
+    },
+    {
+      "file": "03-italia.sanitized.json",
+      "query": "Italia",
+      "date": "2026-06-12T07:33:22.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4427623001",
+        "4426611336",
+        "4426625016",
+        "4425492407",
+        "4427530850",
+        "4425879796"
+      ],
+      "titles": [
+        "Global Professional Maintenance Manager",
+        "Devops",
+        "DevOps Engineer",
+        "Devops Engineer",
+        "TECHNICAL MANAGER",
+        "Technical Senior Advisor"
+      ]
+    },
+    {
+      "file": "04-head-of-engineering.sanitized.json",
+      "query": "Head Of Engineering",
+      "date": "2026-06-12T03:33:29.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4426624681",
+        "4425450727",
+        "4421934755",
+        "4425583388",
+        "4424508735",
+        "4423639554"
+      ],
+      "titles": [
+        "Chief Technology Officer",
+        "CORPORATE ENGINEERING DIRECTOR",
+        "Engineering Manager",
+        "Direttore tecnico",
+        "Director of Engineering",
+        "Technical Lead/ Head of Tech"
+      ]
+    },
+    {
+      "file": "05-head-of-engineering.sanitized.json",
+      "query": "Head Of Engineering",
+      "date": "2026-06-12T05:33:19.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4426624681",
+        "4404467767",
+        "4424774317",
+        "4423639554",
+        "4417225283",
+        "4424514965"
+      ],
+      "titles": [
+        "Chief Technology Officer",
+        "Engineering Lead- Options",
+        "Technical Director Energy Transition (Italy)",
+        "Technical Lead/ Head of Tech",
+        "R: TMS System engineering & product development m",
+        "AI-Native Software Engineering Director"
+      ]
+    },
+    {
+      "file": "06-ai-lead.sanitized.json",
+      "query": "AI Lead",
+      "date": "2026-06-12T01:33:19.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4403243060",
+        "4425458772",
+        "4421941363",
+        "4424183473",
+        "4424701404",
+        "4374025327"
+      ],
+      "titles": [
+        "AI & Data Manager",
+        "CALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)",
+        "GenAI Lead",
+        "AI Product Manager",
+        "Lead Tech",
+        "Manager Data&AI"
+      ]
+    },
+    {
+      "file": "07-applied-ai-lead.sanitized.json",
+      "query": "Applied AI Lead",
+      "date": "2026-06-11T23:33:18.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4403243060",
+        "4425458772",
+        "4424183473",
+        "4424701404",
+        "4374025327",
+        "4416402231"
+      ],
+      "titles": [
+        "AI & Data Manager",
+        "CALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)",
+        "AI Product Manager",
+        "Lead Tech",
+        "Manager Data&AI",
+        "AI Delivery Manager"
+      ]
+    },
+    {
+      "file": "08-ai-solution-architect.sanitized.json",
+      "query": "AI Solution Architect",
+      "date": "2026-06-11T21:33:17.000Z",
+      "jobCount": 6,
+      "jobIds": [
+        "4424904847",
+        "4395469517",
+        "4425841902",
+        "4421930341",
+        "4427064411",
+        "4415536088"
+      ],
+      "titles": [
+        "AI Solutions Architect",
+        "Senior Solutions Architect, AI Factory",
+        "AI/Gen AI Solution Architect",
+        "AI Data Architect",
+        "Senior Solutions Architect",
+        "AI Application Architect"
+      ]
+    }
+  ]
+}

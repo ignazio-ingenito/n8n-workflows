@@ -1,0 +1,73 @@
+{
+  "id": "fixture-linkedin-head-of-engineering-05",
+  "source": "LinkedIn alert email",
+  "query": "Head Of Engineering",
+  "subject": "Ignazio: il tuo avviso di offerte di lavoro per Head Of Engineering (Italia) è stato creato",
+  "from": "jobalerts-noreply@linkedin.com",
+  "date": "2026-06-12T05:33:19.000Z",
+  "textPlain": "Il tuo avviso di offerte di lavoro è stato creato: Head Of Engineering (Italia).\nRiceverai notifiche quando vengono pubblicate nuove offerte di lavoro che corrispondono alle tue preferenze di ricerca.\n\nChief Technology Officer\nWeHunt\nVerona, Veneto, Italia\n\nCandidati con curriculum e profilo\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4426624681\n\n---------------------------------------------------------\n\nEngineering Lead- Options\nKeyrock\nRoma, Lazio, Italia\n\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4404467767\n\n---------------------------------------------------------\n\nTechnical Director Energy Transition (Italy)\nMott MacDonald\nGenova, Liguria, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424774317\n\n---------------------------------------------------------\n\nTechnical Lead/ Head of Tech\nChaberton Professionals\nItalia\n\n1 collegamento\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4423639554\n\n---------------------------------------------------------\n\nR: TMS System engineering & product development m\nAlstom\nBologna, Emilia Romagna, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4417225283\n\n---------------------------------------------------------\n\nAI-Native Software Engineering Director\nJobgether\nItalia\n\nCandidati con curriculum e profilo\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424514965\n",
+  "textHtml": "",
+  "expected": {
+    "jobCount": 6,
+    "jobs": [
+      {
+        "title": "Chief Technology Officer",
+        "company": "WeHunt",
+        "location": "Verona, Veneto, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4426624681",
+        "jobId": "4426624681",
+        "flags": [
+          "Candidati con curriculum e profilo"
+        ]
+      },
+      {
+        "title": "Engineering Lead- Options",
+        "company": "Keyrock",
+        "location": "Roma, Lazio, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4404467767",
+        "jobId": "4404467767",
+        "flags": []
+      },
+      {
+        "title": "Technical Director Energy Transition (Italy)",
+        "company": "Mott MacDonald",
+        "location": "Genova, Liguria, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4424774317",
+        "jobId": "4424774317",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "Technical Lead/ Head of Tech",
+        "company": "Chaberton Professionals",
+        "location": "Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4423639554",
+        "jobId": "4423639554",
+        "flags": [
+          "1 collegamento"
+        ]
+      },
+      {
+        "title": "R: TMS System engineering & product development m",
+        "company": "Alstom",
+        "location": "Bologna, Emilia Romagna, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4417225283",
+        "jobId": "4417225283",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "AI-Native Software Engineering Director",
+        "company": "Jobgether",
+        "location": "Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4424514965",
+        "jobId": "4424514965",
+        "flags": [
+          "Candidati con curriculum e profilo"
+        ]
+      }
+    ]
+  }
+}

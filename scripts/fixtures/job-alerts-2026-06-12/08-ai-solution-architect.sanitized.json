@@ -1,0 +1,75 @@
+{
+  "id": "fixture-linkedin-ai-solution-architect-08",
+  "source": "LinkedIn alert email",
+  "query": "AI Solution Architect",
+  "subject": "Ignazio: il tuo avviso di offerte di lavoro per AI Solution Architect (Italia) è stato creato",
+  "from": "jobalerts-noreply@linkedin.com",
+  "date": "2026-06-11T21:33:17.000Z",
+  "textPlain": "Il tuo avviso di offerte di lavoro è stato creato: AI Solution Architect (Italia).\nRiceverai notifiche quando vengono pubblicate nuove offerte di lavoro che corrispondono alle tue preferenze di ricerca.\n\nAI Solutions Architect\nMSX International\nRoma, Lazio, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424904847\n\n---------------------------------------------------------\n\nSenior Solutions Architect, AI Factory\nNVIDIA\nRoma, Lazio, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4395469517\n\n---------------------------------------------------------\n\nAI/Gen AI Solution Architect\nDXC Technology\nMilano, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4425841902\n\n---------------------------------------------------------\n\nAI Data Architect\nSDG Group\nItalia\n\n1 ex dipendente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4421930341\n\n---------------------------------------------------------\n\nSenior Solutions Architect\nGitLab\nItalia\n\n1 collegamento\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4427064411\n\n---------------------------------------------------------\n\nAI Application Architect\nAvanade\nMilano, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4415536088\n",
+  "textHtml": "",
+  "expected": {
+    "jobCount": 6,
+    "jobs": [
+      {
+        "title": "AI Solutions Architect",
+        "company": "MSX International",
+        "location": "Roma, Lazio, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4424904847",
+        "jobId": "4424904847",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "Senior Solutions Architect, AI Factory",
+        "company": "NVIDIA",
+        "location": "Roma, Lazio, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4395469517",
+        "jobId": "4395469517",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "AI/Gen AI Solution Architect",
+        "company": "DXC Technology",
+        "location": "Milano, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4425841902",
+        "jobId": "4425841902",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "AI Data Architect",
+        "company": "SDG Group",
+        "location": "Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4421930341",
+        "jobId": "4421930341",
+        "flags": [
+          "1 ex dipendente"
+        ]
+      },
+      {
+        "title": "Senior Solutions Architect",
+        "company": "GitLab",
+        "location": "Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4427064411",
+        "jobId": "4427064411",
+        "flags": [
+          "1 collegamento"
+        ]
+      },
+      {
+        "title": "AI Application Architect",
+        "company": "Avanade",
+        "location": "Milano, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4415536088",
+        "jobId": "4415536088",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      }
+    ]
+  }
+}

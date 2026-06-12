@@ -1,0 +1,75 @@
+{
+  "id": "fixture-linkedin-cto-02",
+  "source": "LinkedIn alert email",
+  "query": "CTO",
+  "subject": "Ignazio: il tuo avviso di offerte di lavoro per CTO (Italia) è stato creato",
+  "from": "jobalerts-noreply@linkedin.com",
+  "date": "2026-06-12T09:33:18.000Z",
+  "textPlain": "Il tuo avviso di offerte di lavoro è stato creato: CTO (Italia).\nRiceverai notifiche quando vengono pubblicate nuove offerte di lavoro che corrispondono alle tue preferenze di ricerca.\n\nChief Technology Officer\nWeHunt\nVerona, Veneto, Italia\n\nCandidati con curriculum e profilo\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4426624681\n\n---------------------------------------------------------\n\nTechnical Director Energy Transition (Italy)\nMott MacDonald\nGenova, Liguria, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424774317\n\n---------------------------------------------------------\n\nCORPORATE ENGINEERING DIRECTOR\nAntal International\nMilano, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nCandidati con curriculum e profilo\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4425450727\n\n---------------------------------------------------------\n\nField CTO\nJobgether\nItalia\n\nCandidati con curriculum e profilo\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4426608715\n\n---------------------------------------------------------\n\nHead of Connectivity\nElectrolux Professional Group\nPordenone, Friuli-Venezia Giulia, Italia\n\nQuesta azienda sta assumendo attivamente\nCandidati con curriculum e profilo\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4422256309\n\n---------------------------------------------------------\n\nCALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)\nFondazione Bruno Kessler - FBK\nTrento, Trentino-Alto Adige, Italia\n\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4425458772\n",
+  "textHtml": "",
+  "expected": {
+    "jobCount": 6,
+    "jobs": [
+      {
+        "title": "Chief Technology Officer",
+        "company": "WeHunt",
+        "location": "Verona, Veneto, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4426624681",
+        "jobId": "4426624681",
+        "flags": [
+          "Candidati con curriculum e profilo"
+        ]
+      },
+      {
+        "title": "Technical Director Energy Transition (Italy)",
+        "company": "Mott MacDonald",
+        "location": "Genova, Liguria, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4424774317",
+        "jobId": "4424774317",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "CORPORATE ENGINEERING DIRECTOR",
+        "company": "Antal International",
+        "location": "Milano, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4425450727",
+        "jobId": "4425450727",
+        "flags": [
+          "Questa azienda sta assumendo attivamente",
+          "Candidati con curriculum e profilo"
+        ]
+      },
+      {
+        "title": "Field CTO",
+        "company": "Jobgether",
+        "location": "Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4426608715",
+        "jobId": "4426608715",
+        "flags": [
+          "Candidati con curriculum e profilo"
+        ]
+      },
+      {
+        "title": "Head of Connectivity",
+        "company": "Electrolux Professional Group",
+        "location": "Pordenone, Friuli-Venezia Giulia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4422256309",
+        "jobId": "4422256309",
+        "flags": [
+          "Questa azienda sta assumendo attivamente",
+          "Candidati con curriculum e profilo"
+        ]
+      },
+      {
+        "title": "CALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)",
+        "company": "Fondazione Bruno Kessler - FBK",
+        "location": "Trento, Trentino-Alto Adige, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4425458772",
+        "jobId": "4425458772",
+        "flags": []
+      }
+    ]
+  }
+}

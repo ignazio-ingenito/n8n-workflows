@@ -1,0 +1,69 @@
+{
+  "id": "fixture-linkedin-applied-ai-lead-07",
+  "source": "LinkedIn alert email",
+  "query": "Applied AI Lead",
+  "subject": "Ignazio: il tuo avviso di offerte di lavoro per Applied AI Lead (Italia) è stato creato",
+  "from": "jobalerts-noreply@linkedin.com",
+  "date": "2026-06-11T23:33:18.000Z",
+  "textPlain": "Il tuo avviso di offerte di lavoro è stato creato: Applied AI Lead (Italia).\nRiceverai notifiche quando vengono pubblicate nuove offerte di lavoro che corrispondono alle tue preferenze di ricerca.\n\nAI & Data Manager\nCosta Crociere S.p.A.\nGenova, Liguria, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4403243060\n\n---------------------------------------------------------\n\nCALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)\nFondazione Bruno Kessler - FBK\nTrento, Trentino-Alto Adige, Italia\n\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4425458772\n\n---------------------------------------------------------\n\nAI Product Manager\nGenerali\nMilano, Lombardia, Italia\n\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424183473\n\n---------------------------------------------------------\n\nLead Tech\nZucchetti Centro Sistemi Spa\nTerranuova Bracciolini, Toscana, Italia\n\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424701404\n\n---------------------------------------------------------\n\nManager Data&AI\nKPMG Italy\nMilano, Lombardia, Italia\n\nQuesta azienda sta assumendo attivamente\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4374025327\n\n---------------------------------------------------------\n\nAI Delivery Manager\nMC Engineering\nItalia\n\n1 collegamento\nVisualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4416402231\n",
+  "textHtml": "",
+  "expected": {
+    "jobCount": 6,
+    "jobs": [
+      {
+        "title": "AI & Data Manager",
+        "company": "Costa Crociere S.p.A.",
+        "location": "Genova, Liguria, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4403243060",
+        "jobId": "4403243060",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "CALL FOR THE SELECTION OF THE DIRECTOR OF THE FBK RESEARCH CENTER FOR MACHINE  INTELLIGENCE (MI)",
+        "company": "Fondazione Bruno Kessler - FBK",
+        "location": "Trento, Trentino-Alto Adige, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4425458772",
+        "jobId": "4425458772",
+        "flags": []
+      },
+      {
+        "title": "AI Product Manager",
+        "company": "Generali",
+        "location": "Milano, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4424183473",
+        "jobId": "4424183473",
+        "flags": []
+      },
+      {
+        "title": "Lead Tech",
+        "company": "Zucchetti Centro Sistemi Spa",
+        "location": "Terranuova Bracciolini, Toscana, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4424701404",
+        "jobId": "4424701404",
+        "flags": []
+      },
+      {
+        "title": "Manager Data&AI",
+        "company": "KPMG Italy",
+        "location": "Milano, Lombardia, Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4374025327",
+        "jobId": "4374025327",
+        "flags": [
+          "Questa azienda sta assumendo attivamente"
+        ]
+      },
+      {
+        "title": "AI Delivery Manager",
+        "company": "MC Engineering",
+        "location": "Italia",
+        "url": "https://www.linkedin.com/comm/jobs/view/4416402231",
+        "jobId": "4416402231",
+        "flags": [
+          "1 collegamento"
+        ]
+      }
+    ]
+  }
+}
