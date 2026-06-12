@@ -198,7 +198,26 @@ async function runTelegramNodeUnitChecks(workflow) {
       profileFitScore: 60,
       enrichmentStatus: 'fetched'
     }],
-    records: []
+    records: [
+      {
+        title: 'Engineering Manager',
+        company: 'Subito',
+        url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
+        source: 'LinkedIn alert email',
+        recommendedAction: 'ignore',
+        applicationPriorityScore: 24,
+        profileFitScore: 30
+      },
+      {
+        title: 'Engineering Manager',
+        company: 'Subito',
+        url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
+        source: 'LinkedIn alert email',
+        recommendedAction: 'ignore',
+        applicationPriorityScore: 24,
+        profileFitScore: 30
+      }
+    ]
   };
   const result = await runTelegramNode(telegramCode, report);
   if (!/Email messages: 1/.test(result.telegramMessage || '') || !/Jobs parsed: 1/.test(result.telegramMessage || '')) {
@@ -212,6 +231,10 @@ async function runTelegramNodeUnitChecks(workflow) {
   }
   if (/Manual inspection: 1/.test(result.telegramMessage || '')) {
     throw new Error('High interest records must not also be counted as manual inspection');
+  }
+  const engineeringManagerOccurrences = (result.telegramMessage.match(/Engineering Manager - Subito/g) || []).length;
+  if (engineeringManagerOccurrences !== 1) {
+    throw new Error('Build Telegram Message must deduplicate Below threshold records by URL or title');
   }
 }
 
