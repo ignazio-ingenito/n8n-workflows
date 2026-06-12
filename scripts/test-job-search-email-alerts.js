@@ -224,17 +224,49 @@ async function runEmailDigestNodeUnitChecks(workflow) {
       company: 'Costa Crociere S.p.A.',
       url: 'https://www.linkedin.com/comm/jobs/view/1',
       source: 'LinkedIn alert email',
+      alertQuery: 'AI Lead',
       recommendedAction: 'inspect manually',
       applicationPriorityScore: 69,
       profileFitScore: 60,
       enrichmentStatus: 'login_wall'
     }],
+    queryHealth: [
+      {
+        query: 'AI Lead',
+        narrative: 'AI / Data',
+        jobs: 1,
+        apply: 0,
+        highInterest: 1,
+        manualInspection: 0,
+        ignored: 0,
+        belowThreshold: 0,
+        maxPriority: 69,
+        avgPriority: 69,
+        signalCount: 1,
+        status: 'strong'
+      },
+      {
+        query: 'Engineering Manager',
+        narrative: 'Engineering Leadership',
+        jobs: 2,
+        apply: 0,
+        highInterest: 0,
+        manualInspection: 0,
+        ignored: 2,
+        belowThreshold: 0,
+        maxPriority: 24,
+        avgPriority: 24,
+        signalCount: 0,
+        status: 'no_signal'
+      }
+    ],
     records: [
       {
         title: 'Engineering Manager',
         company: 'Subito',
         url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
         source: 'LinkedIn alert email',
+        alertQuery: 'Engineering Manager',
         recommendedAction: 'ignore',
         applicationPriorityScore: 24,
         profileFitScore: 30
@@ -244,6 +276,7 @@ async function runEmailDigestNodeUnitChecks(workflow) {
         company: 'Subito',
         url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
         source: 'LinkedIn alert email',
+        alertQuery: 'Engineering Manager',
         recommendedAction: 'ignore',
         applicationPriorityScore: 24,
         profileFitScore: 30
@@ -259,6 +292,9 @@ async function runEmailDigestNodeUnitChecks(workflow) {
   }
   if (!/1\. AI &amp; Data Manager/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must HTML-escape job titles and render explicit item numbers in the HTML body');
+  }
+  if (!/Query Health/.test(result.emailText || '') || !/Alert: AI Lead/.test(result.emailText || '') || !/AI Lead - strong/.test(result.emailHtml || '')) {
+    throw new Error('Build Email Digest must include alert query health and per-job alert query context');
   }
   if (!/High interest \(1\)/.test(result.emailHtml || '') || /<ol>|<li>/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must render email-safe HTML sections without relying on ordered-list markers');
@@ -280,17 +316,49 @@ async function runTelegramNodeUnitChecks(workflow) {
       company: 'Costa Crociere S.p.A.',
       url: 'https://www.linkedin.com/comm/jobs/view/1',
       source: 'LinkedIn alert email',
+      alertQuery: 'AI Lead',
       recommendedAction: 'inspect manually',
       applicationPriorityScore: 69,
       profileFitScore: 60,
       enrichmentStatus: 'fetched'
     }],
+    queryHealth: [
+      {
+        query: 'AI Lead',
+        narrative: 'AI / Data',
+        jobs: 1,
+        apply: 0,
+        highInterest: 1,
+        manualInspection: 0,
+        ignored: 0,
+        belowThreshold: 0,
+        maxPriority: 69,
+        avgPriority: 69,
+        signalCount: 1,
+        status: 'strong'
+      },
+      {
+        query: 'Engineering Manager',
+        narrative: 'Engineering Leadership',
+        jobs: 2,
+        apply: 0,
+        highInterest: 0,
+        manualInspection: 0,
+        ignored: 2,
+        belowThreshold: 0,
+        maxPriority: 24,
+        avgPriority: 24,
+        signalCount: 0,
+        status: 'no_signal'
+      }
+    ],
     records: [
       {
         title: 'Engineering Manager',
         company: 'Subito',
         url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
         source: 'LinkedIn alert email',
+        alertQuery: 'Engineering Manager',
         recommendedAction: 'ignore',
         applicationPriorityScore: 24,
         profileFitScore: 30
@@ -300,6 +368,7 @@ async function runTelegramNodeUnitChecks(workflow) {
         company: 'Subito',
         url: 'https://www.linkedin.com/comm/jobs/view/4421934755',
         source: 'LinkedIn alert email',
+        alertQuery: 'Engineering Manager',
         recommendedAction: 'ignore',
         applicationPriorityScore: 24,
         profileFitScore: 30
@@ -312,6 +381,9 @@ async function runTelegramNodeUnitChecks(workflow) {
   }
   if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. AI &amp; Data Manager/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section and HTML-escape Telegram text');
+  }
+  if (!/Query Health/.test(result.telegramMessage || '') || !/AI Lead - strong/.test(result.telegramMessage || '') || !/Alert: AI Lead/.test(result.telegramMessage || '')) {
+    throw new Error('Build Telegram Message must include alert query health and per-job alert query context');
   }
   if (hasInvalidTelegramHtmlEntity(result.telegramMessage)) {
     throw new Error('Build Telegram Message must not emit invalid HTML entities because the Telegram node defaults to HTML parse mode');
@@ -377,6 +449,15 @@ function evaluate(filePath, report, telegramReport) {
     .filter(job => job.url && !actualRecords.some(record => record.url === job.url))
     .map(job => job.url);
   const preheaderLeak = actualTitles.filter(title => /avviso di offerte|riceverai notifiche|vedi tutte le offerte/i.test(title));
+  const expectedAlertQuery = String(fixture.expected?.alertQuery || fixture.query || '').replace(/ live Gmail shape$/i, '').trim();
+  const missingAlertQuery = expectedAlertQuery
+    ? actualRecords
+      .filter(record => String(record.alertQuery || '').trim().toLowerCase() !== expectedAlertQuery.toLowerCase())
+      .map(record => record.title || 'n/a')
+    : actualRecords.filter(record => !record.alertQuery).map(record => record.title || 'n/a');
+  const queryHealthFailures = expectedAlertQuery && !(report.queryHealth || []).some(item => String(item.query || '').trim().toLowerCase() === expectedAlertQuery.toLowerCase())
+    ? ['missing queryHealth for ' + expectedAlertQuery]
+    : [];
   const strongDataPoorFailures = expectedTitles
     .filter(isStrongDataPoorTitle)
     .filter(title => {
@@ -413,6 +494,8 @@ function evaluate(filePath, report, telegramReport) {
     missingCanonicalUrls,
     missingEnrichedUrls,
     preheaderLeak,
+    missingAlertQuery,
+    queryHealthFailures,
     strongDataPoorFailures,
     telegramSectionFailures,
     telegramPreview: telegramMessage.slice(0, 700),
@@ -423,7 +506,8 @@ function evaluate(filePath, report, telegramReport) {
       priority: record.applicationPriorityScore,
       roleFamily: record.roleFamily,
       url: record.url || '',
-      enrichmentStatus: record.enrichmentStatus || ''
+      enrichmentStatus: record.enrichmentStatus || '',
+      alertQuery: record.alertQuery || ''
     }))
   };
 }
@@ -453,6 +537,8 @@ async function main() {
     || result.missingCanonicalUrls.length
     || result.missingEnrichedUrls.length
     || result.preheaderLeak.length
+    || result.missingAlertQuery.length
+    || result.queryHealthFailures.length
     || result.strongDataPoorFailures.length
     || result.telegramSectionFailures.length
   );

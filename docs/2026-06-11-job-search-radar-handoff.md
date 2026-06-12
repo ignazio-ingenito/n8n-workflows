@@ -155,6 +155,14 @@ For `Job Search Email Alerts`, also attach the Gmail OAuth credential to `Scan J
 
 Job Search Email Alerts also attempts bounded enrichment for data-poor manual-inspection LinkedIn alert records. `Prepare Enrichment Requests` emits at most three canonical job-detail URLs per execution, `Fetch Job Detail` retrieves them, and `Merge Enriched Alert Report` appends useful page text when available. The workflow keeps the original data-poor decision when the fetch is not useful. Enrichment status is reported as `fetched` for useful job pages, `login_wall` for LinkedIn login/checkpoint HTML, or `empty`/`failed` when no useful detail text is available. The workflow stores only canonical job URLs in workflow JSON; LinkedIn tracking query strings must stay out of committed workflow files.
 
+Job Search Email Alerts preserves the originating LinkedIn alert query on each
+parsed record as `alertQuery` and aggregates a `queryHealth` section. Query
+health groups records by alert query, reports job volume, useful signals,
+max/average priority and status (`strong`, `promising`, `selective`,
+`watch`, `noisy`, `no_signal`). Email and Telegram digests include this
+section so the active LinkedIn alerts can be calibrated from observed yield
+rather than judged only from individual job titles.
+
 ## Verification
 
 Local repository validation:
