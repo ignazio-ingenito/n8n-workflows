@@ -30,30 +30,25 @@ function fixtureFiles(dir) {
     .map(file => path.join(dir, file));
 }
 
-async function runCode(code, inputItems) {
+async function runCodeItems(code, inputItems) {
   const output = await vm.runInNewContext(`(async function(){${code}
 })()`, {
     $input: {
       all: () => inputItems,
       first: () => inputItems[0]
     },
-    fetch: async url => {
-      const fixture = inputItems[0]?.json || {};
-      const htmlByUrl = fixture.enrichmentHtmlByUrl || {};
-      const key = String(url || '');
-      if (!Object.prototype.hasOwnProperty.call(htmlByUrl, key)) {
-        throw new Error('No mocked enrichment response for ' + key);
-      }
-      return {
-        text: async () => htmlByUrl[key]
-      };
-    },
     console
   }, { timeout: 5000 });
 
-  if (!Array.isArray(output) || !output[0] || !output[0].json) {
+  if (!Array.isArray(output) || output.some(item => !item || !item.json)) {
     throw new Error('Code node returned an invalid n8n item array');
   }
+  return output;
+}
+
+async function runCode(code, inputItems) {
+  const output = await runCodeItems(code, inputItems);
+  if (!output[0]) throw new Error('Code node returned no items');
   return output[0].json;
 }
 
@@ -76,6 +71,35 @@ async function runParseNode(code, fixture) {
 
 async function runTelegramNode(code, report) {
   return runCode(code, [{ json: report }]);
+}
+
+async function runEnrichmentGraph(workflow, report, fixture) {
+  const requests = Array.isArray(report.enrichmentRequests) ? report.enrichmentRequests : [];
+  if (!requests.length) return report;
+
+  const prepareCode = codeNode(workflow, 'Prepare Enrichment Requests');
+  const mergeCode = codeNode(workflow, 'Merge Enriched Alert Report');
+  const requestItems = await runCodeItems(prepareCode, [{ json: report }]);
+  const htmlByUrl = fixture.enrichmentHtmlByUrl || {};
+  const fetchedItems = requestItems.map(item => {
+    const url = item.json.url || '';
+    if (!Object.prototype.hasOwnProperty.call(htmlByUrl, url)) {
+      return {
+        json: {
+          ...item.json,
+          error: { message: 'No mocked enrichment response for ' + url }
+        }
+      };
+    }
+    return {
+      json: {
+        ...item.json,
+        jobDetailHtml: htmlByUrl[url]
+      }
+    };
+  });
+
+  return runCode(mergeCode, fetchedItems);
 }
 
 function normalizeTitle(value) {
@@ -160,7 +184,8 @@ async function main() {
   const results = [];
   for (const file of files) {
     const fixture = readJson(file);
-    const report = await runParseNode(parseCode, fixture);
+    const parsedReport = await runParseNode(parseCode, fixture);
+    const report = await runEnrichmentGraph(workflow, parsedReport, fixture);
     const telegramReport = await runTelegramNode(telegramCode, report);
     results.push(evaluate(file, report, telegramReport));
   }
