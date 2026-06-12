@@ -45,13 +45,22 @@ function fixtureFiles(dir) {
     .map(file => path.join(dir, file));
 }
 
-async function runCodeItems(code, inputItems) {
+async function runCodeItems(code, inputItems, referencedNodeItems = {}) {
   const output = await vm.runInNewContext(`(async function(){${code}
 })()`, {
     $input: {
       all: () => inputItems,
       first: () => inputItems[0]
     },
+    $: name => ({
+      all: () => referencedNodeItems[name] || [],
+      first: () => (referencedNodeItems[name] || [])[0]
+    }),
+    $items: name => referencedNodeItems[name] || [],
+    $node: Object.fromEntries(Object.entries(referencedNodeItems).map(([name, items]) => [
+      name,
+      { json: items[0]?.json || {} }
+    ])),
     console
   }, { timeout: 5000 });
 
@@ -61,8 +70,8 @@ async function runCodeItems(code, inputItems) {
   return output;
 }
 
-async function runCode(code, inputItems) {
-  const output = await runCodeItems(code, inputItems);
+async function runCode(code, inputItems, referencedNodeItems = {}) {
+  const output = await runCodeItems(code, inputItems, referencedNodeItems);
   if (!output[0]) throw new Error('Code node returned no items');
   return output[0].json;
 }
@@ -101,20 +110,20 @@ async function runEnrichmentGraph(workflow, report, fixture) {
     if (!Object.prototype.hasOwnProperty.call(htmlByUrl, url)) {
       return {
         json: {
-          ...item.json,
           error: { message: 'No mocked enrichment response for ' + url }
         }
       };
     }
     return {
       json: {
-        ...item.json,
         jobDetailHtml: htmlByUrl[url]
       }
     };
   });
 
-  return runCode(mergeCode, fetchedItems);
+  return runCode(mergeCode, fetchedItems, {
+    'Prepare Enrichment Requests': requestItems
+  });
 }
 
 function normalizeTitle(value) {
