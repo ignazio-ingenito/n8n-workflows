@@ -53,7 +53,9 @@ function runParseNode(code, fixture) {
     from: fixture.from,
     date: fixture.date,
     textPlain: fixture.textPlain,
+    text: fixture.text,
     textHtml: fixture.textHtml || '',
+    html: fixture.html || '',
     snippet: ''
   };
 
