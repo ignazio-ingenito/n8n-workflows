@@ -257,8 +257,11 @@ async function runEmailDigestNodeUnitChecks(workflow) {
   if (!/Email messages: 2/.test(result.emailText || '') || !/Jobs parsed: 2/.test(result.emailText || '')) {
     throw new Error('Build Email Digest must include email and job counts in the plain text body');
   }
-  if (!/AI &amp; Data Manager/.test(result.emailHtml || '')) {
-    throw new Error('Build Email Digest must HTML-escape job titles in the HTML body');
+  if (!/1\. AI &amp; Data Manager/.test(result.emailHtml || '')) {
+    throw new Error('Build Email Digest must HTML-escape job titles and render explicit item numbers in the HTML body');
+  }
+  if (!/High interest \(1\)/.test(result.emailHtml || '') || /<ol>|<li>/.test(result.emailHtml || '')) {
+    throw new Error('Build Email Digest must render email-safe HTML sections without relying on ordered-list markers');
   }
   const engineeringManagerOccurrences = (result.emailText.match(/Engineering Manager - Subito/g) || []).length;
   if (engineeringManagerOccurrences !== 1) {
