@@ -33,6 +33,14 @@ function hasInvalidTelegramHtmlEntity(value) {
   return /&(?!amp;|lt;|gt;|quot;|#\d+;|#x[0-9a-fA-F]+;)/.test(String(value || ''));
 }
 
+function assertTelegramNodeUsesHtmlParseMode(workflow) {
+  const node = workflowNode(workflow, 'Send Report to Telegram');
+  const parseMode = node.parameters?.additionalFields?.parse_mode;
+  if (parseMode !== 'HTML') {
+    throw new Error(`Send Report to Telegram must explicitly use HTML parse_mode, got "${parseMode}"`);
+  }
+}
+
 function validateWorkflowGraph(workflow) {
   const enrichmentIf = workflowNode(workflow, 'Has Enrichment Requests?');
   const condition = enrichmentIf.parameters?.conditions?.conditions?.[0];
@@ -40,6 +48,7 @@ function validateWorkflowGraph(workflow) {
   if (operation !== 'gt') {
     throw new Error(`Has Enrichment Requests? must use n8n number operation "gt", got "${operation}"`);
   }
+  assertTelegramNodeUsesHtmlParseMode(workflow);
 }
 
 function fixtureFiles(dir) {
