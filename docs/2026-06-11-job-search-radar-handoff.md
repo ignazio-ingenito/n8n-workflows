@@ -156,6 +156,8 @@ For `Job Search Email Alerts`, also attach the Gmail OAuth credential to:
 
 `Job Search Email Alerts` can also deliver the compact digest to Telegram. Configure `telegramChatId` in `Delivery Settings` and attach the Telegram credential to `Send Report to Telegram`. Webhook delivery still wins when `deliveryWebhookUrl` is set. The email workflow uses the same current calibration as the public radar: standalone Product Engineer/full-stack IC roles and non-permanent engagement models are filtered before scoring.
 
+Job Search Email Alerts also attempts bounded enrichment for data-poor manual-inspection LinkedIn alert records. The Parse and Score Alerts Code node fetches at most three canonical job-detail URLs per execution, appends useful page text when available, re-scores those records, and keeps the original data-poor decision when the fetch fails or returns too little text. The workflow never commits or stores LinkedIn tracking tokens in workflow JSON; enrichment uses the canonical job URL already shown in the digest. LinkedIn may still return a login wall or block the request, in which case the digest reports `Enrichment: failed` and the manual-inspection fallback remains authoritative.
+
 ## Verification
 
 Local repository validation:

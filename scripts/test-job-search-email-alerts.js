@@ -30,12 +30,21 @@ function fixtureFiles(dir) {
     .map(file => path.join(dir, file));
 }
 
-function runCode(code, inputItems) {
-  const output = vm.runInNewContext(`(function(){${code}
+async function runCode(code, inputItems) {
+  const output = await vm.runInNewContext(`(async function(){${code}
 })()`, {
     $input: {
       all: () => inputItems,
       first: () => inputItems[0]
+    },
+    $helpers: {
+      httpRequest: async options => {
+        const fixture = inputItems[0]?.json || {};
+        const htmlByUrl = fixture.enrichmentHtmlByUrl || {};
+        const url = String(options?.url || '');
+        if (Object.prototype.hasOwnProperty.call(htmlByUrl, url)) return htmlByUrl[url];
+        throw new Error('No mocked enrichment response for ' + url);
+      }
     },
     console
   }, { timeout: 5000 });
@@ -46,7 +55,7 @@ function runCode(code, inputItems) {
   return output[0].json;
 }
 
-function runParseNode(code, fixture) {
+async function runParseNode(code, fixture) {
   const email = {
     id: fixture.id,
     subject: fixture.subject,
@@ -56,13 +65,14 @@ function runParseNode(code, fixture) {
     text: fixture.text,
     textHtml: fixture.textHtml || '',
     html: fixture.html || '',
+    enrichmentHtmlByUrl: fixture.enrichmentHtmlByUrl || {},
     snippet: ''
   };
 
   return runCode(code, [{ json: email }]);
 }
 
-function runTelegramNode(code, report) {
+async function runTelegramNode(code, report) {
   return runCode(code, [{ json: report }]);
 }
 
@@ -93,8 +103,17 @@ function evaluate(filePath, report, telegramReport) {
     .filter(isStrongDataPoorTitle)
     .filter(title => {
       const record = actualRecords.find(candidate => normalizeTitle(candidate.title) === normalizeTitle(title));
-      return !record || record.dataPoor !== true || record.recommendedAction !== 'inspect manually';
+      if (!record) return true;
+      if (record.enrichmentStatus === 'fetched') {
+        return !['inspect manually', 'apply'].includes(record.recommendedAction);
+      }
+      return record.dataPoor !== true || record.recommendedAction !== 'inspect manually';
     });
+  const expectedEnrichedUrls = fixture.expected?.enrichedUrls || [];
+  const missingEnrichedUrls = expectedEnrichedUrls.filter(url => {
+    const record = actualRecords.find(candidate => candidate.url === url);
+    return !record || record.enrichmentStatus !== 'fetched' || !record.enrichmentSource;
+  });
   const telegramMessage = telegramReport.telegramMessage || '';
   const telegramSectionFailures = [];
   if ((report.matches || []).some(job => job.recommendedAction === 'inspect manually')) {
@@ -112,6 +131,7 @@ function evaluate(filePath, report, telegramReport) {
     missingTitles,
     unexpectedTitles,
     missingCanonicalUrls,
+    missingEnrichedUrls,
     preheaderLeak,
     strongDataPoorFailures,
     telegramSectionFailures,
@@ -122,28 +142,31 @@ function evaluate(filePath, report, telegramReport) {
       action: record.recommendedAction,
       priority: record.applicationPriorityScore,
       roleFamily: record.roleFamily,
-      url: record.url || ''
+      url: record.url || '',
+      enrichmentStatus: record.enrichmentStatus || ''
     }))
   };
 }
 
-function main() {
+async function main() {
   const workflow = readJson(workflowPath);
   const parseCode = codeNode(workflow, 'Parse and Score Alerts');
   const telegramCode = codeNode(workflow, 'Build Telegram Message');
   const files = fixtureFiles(fixtureDir);
   if (!files.length) throw new Error(`No sanitized fixtures found in ${fixtureDir}`);
 
-  const results = files.map(file => {
+  const results = [];
+  for (const file of files) {
     const fixture = readJson(file);
-    const report = runParseNode(parseCode, fixture);
-    const telegramReport = runTelegramNode(telegramCode, report);
-    return evaluate(file, report, telegramReport);
-  });
+    const report = await runParseNode(parseCode, fixture);
+    const telegramReport = await runTelegramNode(telegramCode, report);
+    results.push(evaluate(file, report, telegramReport));
+  }
   const failures = results.filter(result =>
     result.parsedCount !== result.expectedCount
     || result.missingTitles.length
     || result.missingCanonicalUrls.length
+    || result.missingEnrichedUrls.length
     || result.preheaderLeak.length
     || result.strongDataPoorFailures.length
     || result.telegramSectionFailures.length
@@ -165,4 +188,7 @@ function main() {
   }
 }
 
-main();
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -70,6 +70,14 @@
           "Candidati con curriculum e profilo"
         ]
       }
+    ],
+    "enrichedUrls": [
+      "https://www.linkedin.com/comm/jobs/view/4426624681",
+      "https://www.linkedin.com/comm/jobs/view/4426608715"
     ]
+  },
+  "enrichmentHtmlByUrl": {
+    "https://www.linkedin.com/comm/jobs/view/4426624681": "<html><body><main><h1>Chief Technology Officer</h1><section>Lead the product engineering roadmap for a cloud-native SaaS platform. Own architecture, technical strategy, team leadership, hiring, stakeholder management, delivery governance, AWS, Kubernetes, platform engineering, observability and security modernization. Partner with founders and business teams to scale from startup execution to enterprise-grade operations.</section></main></body></html>",
+    "https://www.linkedin.com/comm/jobs/view/4426608715": "<html><body><main><h1>Field CTO</h1><section>Own technical leadership for strategic customers across cloud architecture, AI adoption, platform modernization, pre-sales discovery, executive workshops, solution architecture, roadmap planning, governance, stakeholder alignment, product feedback and delivery quality. Requires senior communication and hands-on architecture depth.</section></main></body></html>"
   }
 }
