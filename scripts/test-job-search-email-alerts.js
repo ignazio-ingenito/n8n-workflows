@@ -29,6 +29,10 @@ function workflowNode(workflow, name) {
   return node;
 }
 
+function hasInvalidTelegramHtmlEntity(value) {
+  return /&(?!amp;|lt;|gt;|quot;|#\d+;|#x[0-9a-fA-F]+;)/.test(String(value || ''));
+}
+
 function validateWorkflowGraph(workflow) {
   const enrichmentIf = workflowNode(workflow, 'Has Enrichment Requests?');
   const condition = enrichmentIf.parameters?.conditions?.conditions?.[0];
@@ -155,8 +159,8 @@ async function runTelegramNodeUnitChecks(workflow) {
     generatedAt: '2026-06-12T00:00:00.000Z',
     parsedCount: 1,
     matches: [{
-      title: 'Chief Technology Officer',
-      company: 'WeHunt',
+      title: 'AI & Data Manager',
+      company: 'Costa Crociere S.p.A.',
       url: 'https://www.linkedin.com/comm/jobs/view/1',
       source: 'LinkedIn alert email',
       recommendedAction: 'inspect manually',
@@ -167,8 +171,11 @@ async function runTelegramNodeUnitChecks(workflow) {
     records: []
   };
   const result = await runTelegramNode(telegramCode, report);
-  if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. Chief Technology Officer/.test(result.telegramMessage || '')) {
-    throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section');
+  if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. AI &amp; Data Manager/.test(result.telegramMessage || '')) {
+    throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section and HTML-escape Telegram text');
+  }
+  if (hasInvalidTelegramHtmlEntity(result.telegramMessage)) {
+    throw new Error('Build Telegram Message must not emit invalid HTML entities because the Telegram node defaults to HTML parse mode');
   }
   if (/Manual inspection: 1/.test(result.telegramMessage || '')) {
     throw new Error('High interest records must not also be counted as manual inspection');
@@ -249,6 +256,7 @@ function evaluate(filePath, report, telegramReport) {
     if (/Best parsed jobs below threshold/i.test(telegramMessage)) telegramSectionFailures.push('legacy below-threshold title shown with inspect records');
   }
   if (!/Below threshold/i.test(telegramMessage)) telegramSectionFailures.push('missing below threshold section');
+  if (hasInvalidTelegramHtmlEntity(telegramMessage)) telegramSectionFailures.push('invalid Telegram HTML entity');
 
   return {
     file: path.basename(filePath),
