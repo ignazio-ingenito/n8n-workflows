@@ -37,14 +37,16 @@ async function runCode(code, inputItems) {
       all: () => inputItems,
       first: () => inputItems[0]
     },
-    $helpers: {
-      httpRequest: async options => {
-        const fixture = inputItems[0]?.json || {};
-        const htmlByUrl = fixture.enrichmentHtmlByUrl || {};
-        const url = String(options?.url || '');
-        if (Object.prototype.hasOwnProperty.call(htmlByUrl, url)) return htmlByUrl[url];
-        throw new Error('No mocked enrichment response for ' + url);
+    fetch: async url => {
+      const fixture = inputItems[0]?.json || {};
+      const htmlByUrl = fixture.enrichmentHtmlByUrl || {};
+      const key = String(url || '');
+      if (!Object.prototype.hasOwnProperty.call(htmlByUrl, key)) {
+        throw new Error('No mocked enrichment response for ' + key);
       }
+      return {
+        text: async () => htmlByUrl[key]
+      };
     },
     console
   }, { timeout: 5000 });
