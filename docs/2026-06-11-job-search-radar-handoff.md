@@ -64,8 +64,8 @@ Manual Trigger / Schedule Trigger
      true  -> Send Report Webhook
      false -> No Delivery Configured -> output report only
 
-Gmail Trigger
-  -> Get Alert Email
+Schedule Trigger
+  -> Scan Job Alert Emails (Gmail Get Many, unread backlog)
   -> Parse and Score Alerts
   -> Delivery Settings
   -> Has Delivery Webhook?
@@ -82,9 +82,9 @@ Gmail Trigger
 - If one source fails, the current workflow execution fails at that node; a
   later hardening pass can enable per-source `continueOnFail` and include
   source-level error reporting.
-- The email-alert workflow requires a Gmail credential attached in the n8n UI
-  after import. The workflow JSON intentionally does not commit any credential
-  reference.
+- The email-alert workflow scans unread Gmail alert messages on each scheduled
+  run. It requires a Gmail credential attached in the n8n UI after import. The
+  workflow JSON intentionally does not commit any credential reference.
 - Do not scrape LinkedIn directly. Use saved searches and job alerts, then let
   n8n read the alert emails.
 - The detailed ranking model, role family boundaries and query seed set remain
@@ -149,10 +149,7 @@ For `Job Search Radar`, attach the Telegram credential to `Send Report to Telegr
 
 The Telegram digest is generated as plain text for the user, but the n8n Telegram node exposes HTML as its parse mode default. The formatter strips HTML tags, decodes common HTML entities while building the readable text, then HTML-escapes the final Telegram payload so titles like `AI & Data Manager` do not fail with Telegram entity parsing errors. Keep Telegram `additionalFields.appendAttribution` set to `false` so n8n does not append attribution text to outbound messages. Do not use Telegram attribution or markup settings as formatting workarounds.
 
-For `Job Search Email Alerts`, also attach the Gmail OAuth credential to:
-
-- `Scan Job Alert Emails`
-- `Get Alert Email`
+For `Job Search Email Alerts`, also attach the Gmail OAuth credential to `Scan Job Alert Emails`.
 
 `Job Search Email Alerts` can also deliver the compact digest to Telegram. Configure `telegramChatId` in `Delivery Settings` and attach the Telegram credential to `Send Report to Telegram`. Webhook delivery still wins when `deliveryWebhookUrl` is set. The email workflow uses the same current calibration as the public radar: standalone Product Engineer/full-stack IC roles and non-permanent engagement models are filtered before scoring.
 

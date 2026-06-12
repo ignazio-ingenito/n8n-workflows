@@ -41,6 +41,24 @@ function assertTelegramNodeUsesHtmlParseMode(workflow) {
   }
 }
 
+function assertGmailBacklogScan(workflow) {
+  const schedule = workflowNode(workflow, 'Schedule Trigger');
+  if (schedule.type !== 'n8n-nodes-base.scheduleTrigger') {
+    throw new Error('Job Search Email Alerts must start from Schedule Trigger for unread backlog scans');
+  }
+  const scan = workflowNode(workflow, 'Scan Job Alert Emails');
+  if (scan.type !== 'n8n-nodes-base.gmail' || scan.parameters?.operation !== 'getAll') {
+    throw new Error('Scan Job Alert Emails must use Gmail Get Many instead of Gmail Trigger');
+  }
+  if (scan.parameters?.filters?.readStatus !== 'unread') {
+    throw new Error('Scan Job Alert Emails must scan unread messages');
+  }
+  const scanTargets = workflow.connections?.['Scan Job Alert Emails']?.main?.[0]?.map(edge => edge.node) || [];
+  if (!scanTargets.includes('Parse and Score Alerts')) {
+    throw new Error('Scan Job Alert Emails must feed Parse and Score Alerts directly');
+  }
+}
+
 function validateWorkflowGraph(workflow) {
   const enrichmentIf = workflowNode(workflow, 'Has Enrichment Requests?');
   const condition = enrichmentIf.parameters?.conditions?.conditions?.[0];
@@ -49,6 +67,7 @@ function validateWorkflowGraph(workflow) {
     throw new Error(`Has Enrichment Requests? must use n8n number operation "gt", got "${operation}"`);
   }
   assertTelegramNodeUsesHtmlParseMode(workflow);
+  assertGmailBacklogScan(workflow);
 }
 
 function fixtureFiles(dir) {
@@ -132,6 +151,7 @@ async function runMergeNodeUnitChecks(workflow) {
   };
   const baseReport = {
     generatedAt: '2026-06-12T00:00:00.000Z',
+    emailCount: 1,
     parsedCount: 1,
     matchCount: 1,
     minPriorityScore: 35,
@@ -166,6 +186,7 @@ async function runTelegramNodeUnitChecks(workflow) {
   const telegramCode = codeNode(workflow, 'Build Telegram Message');
   const report = {
     generatedAt: '2026-06-12T00:00:00.000Z',
+    emailCount: 1,
     parsedCount: 1,
     matches: [{
       title: 'AI & Data Manager',
@@ -180,6 +201,9 @@ async function runTelegramNodeUnitChecks(workflow) {
     records: []
   };
   const result = await runTelegramNode(telegramCode, report);
+  if (!/Email messages: 1/.test(result.telegramMessage || '') || !/Jobs parsed: 1/.test(result.telegramMessage || '')) {
+    throw new Error('Build Telegram Message must show separate email and parsed job counts');
+  }
   if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. AI &amp; Data Manager/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section and HTML-escape Telegram text');
   }
@@ -271,6 +295,7 @@ function evaluate(filePath, report, telegramReport) {
     file: path.basename(filePath),
     query: fixture.query,
     expectedCount: expectedJobs.length,
+    emailCount: report.emailCount,
     parsedCount: report.parsedCount,
     matchCount: report.matchCount,
     missingTitles,
@@ -325,6 +350,7 @@ async function main() {
     fixtureDir,
     fixtureCount: results.length,
     expectedJobs: results.reduce((sum, result) => sum + result.expectedCount, 0),
+    emailMessages: results.reduce((sum, result) => sum + (result.emailCount || 0), 0),
     parsedJobs: results.reduce((sum, result) => sum + result.parsedCount, 0),
     failures: failures.length,
     results
