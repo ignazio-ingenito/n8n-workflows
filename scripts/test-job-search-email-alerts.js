@@ -23,6 +23,21 @@ function codeNode(workflow, name) {
   return node.parameters.jsCode;
 }
 
+function workflowNode(workflow, name) {
+  const node = workflow.nodes.find(candidate => candidate.name === name);
+  if (!node) throw new Error(`Missing node: ${name}`);
+  return node;
+}
+
+function validateWorkflowGraph(workflow) {
+  const enrichmentIf = workflowNode(workflow, 'Has Enrichment Requests?');
+  const condition = enrichmentIf.parameters?.conditions?.conditions?.[0];
+  const operation = condition?.operator?.operation;
+  if (operation !== 'gt') {
+    throw new Error(`Has Enrichment Requests? must use n8n number operation "gt", got "${operation}"`);
+  }
+}
+
 function fixtureFiles(dir) {
   return fs.readdirSync(dir)
     .filter(file => file.endsWith('.sanitized.json'))
@@ -176,6 +191,7 @@ function evaluate(filePath, report, telegramReport) {
 
 async function main() {
   const workflow = readJson(workflowPath);
+  validateWorkflowGraph(workflow);
   const parseCode = codeNode(workflow, 'Parse and Score Alerts');
   const telegramCode = codeNode(workflow, 'Build Telegram Message');
   const files = fixtureFiles(fixtureDir);
