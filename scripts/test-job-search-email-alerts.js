@@ -215,8 +215,11 @@ async function runMergeNodeUnitChecks(workflow) {
   if (record?.enrichmentStatus !== 'login_wall') {
     throw new Error(`Expected LinkedIn login page to become enrichmentStatus=login_wall, got "${record?.enrichmentStatus}"`);
   }
-  if (!Array.isArray(report.queryHealth) || report.queryHealth[0]?.query !== 'Platform Engineering Lead') {
-    throw new Error('Merge Enriched Alert Report must recompute queryHealth from merged records');
+  if (!Array.isArray(report.queryHealth) || report.queryHealth[0]?.query !== 'Platform / Cloud / DevOps') {
+    throw new Error('Merge Enriched Alert Report must recompute canonical queryHealth from merged records');
+  }
+  if (!report.queryHealth[0]?.aliases?.includes('Platform Engineering Lead')) {
+    throw new Error('Merge Enriched Alert Report must preserve original alert query aliases inside queryHealth');
   }
 }
 
@@ -239,8 +242,10 @@ async function runEmailDigestNodeUnitChecks(workflow) {
     }],
     queryHealth: [
       {
-        query: 'AI Lead',
+        query: 'AI Leadership',
         narrative: 'AI / Data',
+        aliases: ['AI Lead', 'Applied AI Lead'],
+        alertEmailCount: 2,
         jobs: 1,
         apply: 0,
         highInterest: 1,
@@ -253,8 +258,9 @@ async function runEmailDigestNodeUnitChecks(workflow) {
         status: 'strong'
       },
       {
-        query: 'Engineering Manager',
+        query: 'Engineering Management',
         narrative: 'Engineering Leadership',
+        aliases: ['Engineering Manager'],
         jobs: 2,
         apply: 0,
         highInterest: 0,
@@ -303,7 +309,7 @@ async function runEmailDigestNodeUnitChecks(workflow) {
   if (!/fonts\.googleapis\.com\/css2\?family=Montserrat/.test(result.emailHtml || '') || !/font-family:Montserrat,Arial,sans-serif/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must request Google Montserrat and use it as the primary email font');
   }
-  if (!/Query Health/.test(result.emailText || '') || !/Alert: AI Lead/.test(result.emailText || '') || !/AI Lead - strong/.test(result.emailHtml || '')) {
+  if (!/Query Health/.test(result.emailText || '') || !/Alert: AI Lead/.test(result.emailText || '') || !/AI Leadership - strong/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must include alert query health and per-job alert query context');
   }
   if (!/High interest \(1\)/.test(result.emailHtml || '') || /<ol>|<li>/.test(result.emailHtml || '')) {
@@ -334,8 +340,10 @@ async function runTelegramNodeUnitChecks(workflow) {
     }],
     queryHealth: [
       {
-        query: 'AI Lead',
+        query: 'AI Leadership',
         narrative: 'AI / Data',
+        aliases: ['AI Lead', 'Applied AI Lead'],
+        alertEmailCount: 2,
         jobs: 1,
         apply: 0,
         highInterest: 1,
@@ -348,8 +356,9 @@ async function runTelegramNodeUnitChecks(workflow) {
         status: 'strong'
       },
       {
-        query: 'Engineering Manager',
+        query: 'Engineering Management',
         narrative: 'Engineering Leadership',
+        aliases: ['Engineering Manager'],
         jobs: 2,
         apply: 0,
         highInterest: 0,
@@ -392,7 +401,7 @@ async function runTelegramNodeUnitChecks(workflow) {
   if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. AI &amp; Data Manager/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section and HTML-escape Telegram text');
   }
-  if (!/Query Health/.test(result.telegramMessage || '') || !/AI Lead - strong/.test(result.telegramMessage || '') || !/Alert: AI Lead/.test(result.telegramMessage || '')) {
+  if (!/Query Health/.test(result.telegramMessage || '') || !/AI Leadership - strong/.test(result.telegramMessage || '') || !/Alert: AI Lead/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must include alert query health and per-job alert query context');
   }
   if (hasInvalidTelegramHtmlEntity(result.telegramMessage)) {
@@ -465,7 +474,7 @@ function evaluate(filePath, report, telegramReport) {
       .filter(record => String(record.alertQuery || '').trim().toLowerCase() !== expectedAlertQuery.toLowerCase())
       .map(record => record.title || 'n/a')
     : actualRecords.filter(record => !record.alertQuery).map(record => record.title || 'n/a');
-  const queryHealthFailures = expectedAlertQuery && !(report.queryHealth || []).some(item => String(item.query || '').trim().toLowerCase() === expectedAlertQuery.toLowerCase())
+  const queryHealthFailures = expectedAlertQuery && !(report.queryHealth || []).some(item => String(item.query || '').trim().toLowerCase() === expectedAlertQuery.toLowerCase() || (Array.isArray(item.aliases) && item.aliases.some(alias => String(alias || '').trim().toLowerCase() === expectedAlertQuery.toLowerCase())))
     ? ['missing queryHealth for ' + expectedAlertQuery]
     : [];
   const strongDataPoorFailures = expectedTitles

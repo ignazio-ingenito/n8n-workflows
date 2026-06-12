@@ -110,11 +110,13 @@ Telegram va associata manualmente la credenziale Telegram al nodo
 manualmente una credenziale Gmail al nodo `Send Digest Email`.
 
 `Job Search Email Alerts` conserva anche la query dell'alert LinkedIn su ogni
-record come `alertQuery` e produce `queryHealth`, una sintesi per query con
-conteggio job, segnali utili, priorità massima/media e stato operativo
-(`strong`, `promising`, `selective`, `watch`, `noisy`, `no_signal`).
-La stessa sezione appare nei digest email e Telegram per capire quali alert
-conviene tenere, restringere o eliminare.
+record come `alertQuery` e produce `queryHealth`, una sintesi per gruppo
+canonico di query. Alias equivalenti, per esempio `CTO` e `Chief Technology
+Officer`, vengono aggregati nello stesso gruppo mantenendo i nomi originali in
+`aliases`. La sezione riporta conteggio job, segnali utili, priorità
+massima/media e stato operativo (`strong`, `promising`, `selective`, `watch`,
+`noisy`, `no_signal`). La stessa sezione appare nei digest email e Telegram per
+capire quali alert conviene tenere, restringere o eliminare.
 
 Per il workflow email va associata manualmente una credenziale Gmail al nodo
 `Scan Job Alert Emails` dopo l'import. Il nodo scansiona le email non lette

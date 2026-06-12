@@ -157,7 +157,9 @@ Job Search Email Alerts also attempts bounded enrichment for data-poor manual-in
 
 Job Search Email Alerts preserves the originating LinkedIn alert query on each
 parsed record as `alertQuery` and aggregates a `queryHealth` section. Query
-health groups records by alert query, reports job volume, useful signals,
+health groups equivalent alert aliases into canonical query groups, for example
+`CTO` plus `Chief Technology Officer` under `CTO / Technology`, while keeping
+the raw alert names in `aliases`. It reports job volume, useful signals,
 max/average priority and status (`strong`, `promising`, `selective`,
 `watch`, `noisy`, `no_signal`). Email and Telegram digests include this
 section so the active LinkedIn alerts can be calibrated from observed yield
