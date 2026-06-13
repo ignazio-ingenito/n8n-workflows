@@ -833,11 +833,14 @@
     {
       "parameters": {
         "resource": "message",
-        "operation": "markAsRead",
-        "messageId": "={{ $json.messageId }}"
+        "operation": "removeLabels",
+        "messageId": "={{ $json.messageId }}",
+        "labelIds": [
+          "INBOX"
+        ]
       },
-      "id": "mark-processed-email-read-job-search-email-alerts",
-      "name": "Mark Processed Email Read",
+      "id": "archive-processed-email-job-search-email-alerts",
+      "name": "Archive Processed Email",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
@@ -848,14 +851,30 @@
     },
     {
       "parameters": {
-        "jsCode": "const prepared = $('Resolve Processed Label Id').first().json;\nconst labelItems = $('Add Processed Label').all();\nconst readItems = $input.all();\nconst labelSuccesses = labelItems.filter(item => !item.json?.error);\nconst readSuccesses = readItems.filter(item => !item.json?.error);\nconst failures = [];\n\nif (prepared.processedLabelLookupError) failures.push(prepared.processedLabelLookupError);\nfor (const item of labelItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\nfor (const item of readItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\n\nreturn [{\n  json: {\n    ...prepared,\n    processedLabelAppliedCount: labelSuccesses.length,\n    processedReadCount: readSuccesses.length,\n    processedFailures: failures.filter(Boolean)\n  }\n}];"
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "={{ $json.messageId }}"
+      },
+      "id": "mark-processed-email-read-job-search-email-alerts",
+      "name": "Mark Processed Email Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4540,
+        140
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Resolve Processed Label Id').first().json;\nconst labelItems = $('Add Processed Label').all();\nconst archiveItems = $('Archive Processed Email').all();\nconst readItems = $input.all();\nconst labelSuccesses = labelItems.filter(item => !item.json?.error);\nconst archiveSuccesses = archiveItems.filter(item => !item.json?.error);\nconst readSuccesses = readItems.filter(item => !item.json?.error);\nconst failures = [];\n\nif (prepared.processedLabelLookupError) failures.push(prepared.processedLabelLookupError);\nfor (const item of labelItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\nfor (const item of archiveItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\nfor (const item of readItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\n\nreturn [{\n  json: {\n    ...prepared,\n    processedLabelAppliedCount: labelSuccesses.length,\n    processedArchivedCount: archiveSuccesses.length,\n    processedReadCount: readSuccesses.length,\n    processedFailures: failures.filter(Boolean)\n  }\n}];"
       },
       "id": "processed-email-result-job-search-email-alerts",
       "name": "Processed Email Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4540,
+        4800,
         140
       ]
     }
@@ -1143,6 +1162,17 @@
       ]
     },
     "Add Processed Label": {
+      "main": [
+        [
+          {
+            "node": "Archive Processed Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Processed Email": {
       "main": [
         [
           {
