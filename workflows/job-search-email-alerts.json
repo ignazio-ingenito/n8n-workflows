@@ -1028,7 +1028,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        4280,
+        4540,
         140
       ],
       "continueOnFail": true
@@ -1044,7 +1044,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        4540,
+        5060,
         140
       ],
       "continueOnFail": true
@@ -1055,6 +1055,32 @@
       },
       "id": "processed-email-result-job-search-email-alerts",
       "name": "Processed Email Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5320,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const expandedItems = $('Expand Processed Emails').all();\nconst labelItems = $input.all();\n\nreturn labelItems.map((item, index) => {\n  const original = expandedItems[index]?.json || {};\n  const addLabelResult = item.json || {};\n  return {\n    json: {\n      ...original,\n      messageId: original.messageId || addLabelResult.id || addLabelResult.messageId || '',\n      addLabelResult,\n      addLabelError: addLabelResult.error || ''\n    },\n    pairedItem: { item: index }\n  };\n});"
+      },
+      "id": "restore-labeled-email-message-id-job-search-email-alerts",
+      "name": "Restore Labeled Email Message Id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4280,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const labeledItems = $('Restore Labeled Email Message Id').all();\nconst archiveItems = $input.all();\n\nreturn archiveItems.map((item, index) => {\n  const previous = labeledItems[index]?.json || {};\n  const archiveResult = item.json || {};\n  return {\n    json: {\n      ...previous,\n      messageId: previous.messageId || archiveResult.id || archiveResult.messageId || '',\n      archiveResult,\n      archiveError: archiveResult.error || ''\n    },\n    pairedItem: { item: index }\n  };\n});"
+      },
+      "id": "restore-archived-email-message-id-job-search-email-alerts",
+      "name": "Restore Archived Email Message Id",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1349,7 +1375,7 @@
       "main": [
         [
           {
-            "node": "Archive Processed Email",
+            "node": "Restore Labeled Email Message Id",
             "type": "main",
             "index": 0
           }
@@ -1360,7 +1386,7 @@
       "main": [
         [
           {
-            "node": "Mark Processed Email Read",
+            "node": "Restore Archived Email Message Id",
             "type": "main",
             "index": 0
           }
@@ -1427,6 +1453,28 @@
         [
           {
             "node": "Update Query History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Labeled Email Message Id": {
+      "main": [
+        [
+          {
+            "node": "Archive Processed Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Archived Email Message Id": {
+      "main": [
+        [
+          {
+            "node": "Mark Processed Email Read",
             "type": "main",
             "index": 0
           }

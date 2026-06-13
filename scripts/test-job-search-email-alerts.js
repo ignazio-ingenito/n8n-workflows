@@ -125,7 +125,9 @@ function assertProcessedEmailPostProcessing(workflow) {
   const resolveLabelNode = workflowNode(workflow, 'Resolve Processed Label Id');
   const expandNode = workflowNode(workflow, 'Expand Processed Emails');
   const addLabelNode = workflowNode(workflow, 'Add Processed Label');
+  const restoreLabeledNode = workflowNode(workflow, 'Restore Labeled Email Message Id');
   const archiveNode = workflowNode(workflow, 'Archive Processed Email');
+  const restoreArchivedNode = workflowNode(workflow, 'Restore Archived Email Message Id');
   const markReadNode = workflowNode(workflow, 'Mark Processed Email Read');
   const resultNode = workflowNode(workflow, 'Processed Email Result');
 
@@ -153,12 +155,14 @@ function assertProcessedEmailPostProcessing(workflow) {
   if (addLabelNode.parameters?.labelIds !== '={{ [$json.processedLabelId].filter(Boolean) }}') {
     throw new Error('Add Processed Label must apply the resolved Gmail label id');
   }
+  if (restoreLabeledNode.type !== 'n8n-nodes-base.code') throw new Error('Restore Labeled Email Message Id must be a Code node');
   if (archiveNode.type !== 'n8n-nodes-base.gmail' || archiveNode.parameters?.resource !== 'message' || archiveNode.parameters?.operation !== 'removeLabels') {
     throw new Error('Archive Processed Email must use Gmail message removeLabels');
   }
   if (JSON.stringify(archiveNode.parameters?.labelIds) !== JSON.stringify(['INBOX'])) {
     throw new Error('Archive Processed Email must remove the INBOX label');
   }
+  if (restoreArchivedNode.type !== 'n8n-nodes-base.code') throw new Error('Restore Archived Email Message Id must be a Code node');
   if (markReadNode.type !== 'n8n-nodes-base.gmail' || markReadNode.parameters?.resource !== 'message' || markReadNode.parameters?.operation !== 'markAsRead') {
     throw new Error('Mark Processed Email Read must use Gmail message markAsRead');
   }
@@ -172,7 +176,9 @@ function assertProcessedEmailPostProcessing(workflow) {
   const resolveTargets = workflow.connections?.['Resolve Processed Label Id']?.main?.[0]?.map(edge => edge.node) || [];
   const expandTargets = workflow.connections?.['Expand Processed Emails']?.main?.[0]?.map(edge => edge.node) || [];
   const addLabelTargets = workflow.connections?.['Add Processed Label']?.main?.[0]?.map(edge => edge.node) || [];
+  const restoreLabeledTargets = workflow.connections?.['Restore Labeled Email Message Id']?.main?.[0]?.map(edge => edge.node) || [];
   const archiveTargets = workflow.connections?.['Archive Processed Email']?.main?.[0]?.map(edge => edge.node) || [];
+  const restoreArchivedTargets = workflow.connections?.['Restore Archived Email Message Id']?.main?.[0]?.map(edge => edge.node) || [];
   const markReadTargets = workflow.connections?.['Mark Processed Email Read']?.main?.[0]?.map(edge => edge.node) || [];
 
   if (!emailTargets.includes('Prepare Processed Emails')) throw new Error('Email Delivery Result must trigger Prepare Processed Emails');
@@ -182,8 +188,10 @@ function assertProcessedEmailPostProcessing(workflow) {
   if (!getLabelsTargets.includes('Resolve Processed Label Id')) throw new Error('Get Processed Labels must feed Resolve Processed Label Id');
   if (!resolveTargets.includes('Expand Processed Emails')) throw new Error('Resolve Processed Label Id must feed Expand Processed Emails');
   if (!expandTargets.includes('Add Processed Label')) throw new Error('Expand Processed Emails must feed Add Processed Label');
-  if (!addLabelTargets.includes('Archive Processed Email')) throw new Error('Add Processed Label must feed Archive Processed Email');
-  if (!archiveTargets.includes('Mark Processed Email Read')) throw new Error('Archive Processed Email must feed Mark Processed Email Read');
+  if (!addLabelTargets.includes('Restore Labeled Email Message Id')) throw new Error('Add Processed Label must feed Restore Labeled Email Message Id');
+  if (!restoreLabeledTargets.includes('Archive Processed Email')) throw new Error('Restore Labeled Email Message Id must feed Archive Processed Email');
+  if (!archiveTargets.includes('Restore Archived Email Message Id')) throw new Error('Archive Processed Email must feed Restore Archived Email Message Id');
+  if (!restoreArchivedTargets.includes('Mark Processed Email Read')) throw new Error('Restore Archived Email Message Id must feed Mark Processed Email Read');
   if (!markReadTargets.includes('Processed Email Result')) throw new Error('Mark Processed Email Read must feed Processed Email Result');
 }
 
@@ -225,6 +233,41 @@ async function runResolveProcessedLabelIdUnitChecks(workflow) {
   }
   if (result.processedLabelLookupError) {
     throw new Error('Resolve Processed Label Id must not emit a lookup error when the label exists');
+  }
+}
+
+async function runRestoreProcessedMessageIdUnitChecks(workflow) {
+  const restoreLabeledCode = codeNode(workflow, 'Restore Labeled Email Message Id');
+  const restoredAfterLabel = await runCodeItems(restoreLabeledCode, [
+    { json: { id: 'gmail-response-1', labelIds: ['Label_38'] } },
+    { json: { id: 'gmail-response-2', labelIds: ['Label_38'] } },
+  ], {
+    'Expand Processed Emails': [
+      { json: { messageId: 'msg-1', processedLabelId: 'Label_38', processedLabelName: 'job-alert/processed' } },
+      { json: { messageId: 'msg-2', processedLabelId: 'Label_38', processedLabelName: 'job-alert/processed' } },
+    ],
+  });
+
+  if (restoredAfterLabel[0].json.messageId !== 'msg-1' || restoredAfterLabel[1].json.messageId !== 'msg-2') {
+    throw new Error('Restore Labeled Email Message Id must preserve original Gmail messageId values after addLabels output');
+  }
+  if (restoredAfterLabel[0].json.addLabelResult.id !== 'gmail-response-1') {
+    throw new Error('Restore Labeled Email Message Id must retain the addLabels result for diagnostics');
+  }
+
+  const restoreArchivedCode = codeNode(workflow, 'Restore Archived Email Message Id');
+  const restoredAfterArchive = await runCodeItems(restoreArchivedCode, [
+    { json: { id: 'archive-response-1' } },
+    { json: { error: 'Bad request - please check your parameters (item 1)' } },
+  ], {
+    'Restore Labeled Email Message Id': restoredAfterLabel,
+  });
+
+  if (restoredAfterArchive[0].json.messageId !== 'msg-1' || restoredAfterArchive[1].json.messageId !== 'msg-2') {
+    throw new Error('Restore Archived Email Message Id must preserve original Gmail messageId values after removeLabels output');
+  }
+  if (restoredAfterArchive[1].json.archiveError !== 'Bad request - please check your parameters (item 1)') {
+    throw new Error('Restore Archived Email Message Id must retain archive errors for diagnostics');
   }
 }
 
@@ -947,6 +990,7 @@ async function main() {
   await runMergeNodeUnitChecks(workflow);
   await runPrepareProcessedEmailsUnitChecks(workflow);
   await runResolveProcessedLabelIdUnitChecks(workflow);
+  await runRestoreProcessedMessageIdUnitChecks(workflow);
   await runQueryHistoryNodeUnitChecks(workflow);
   await runEmailDigestNodeUnitChecks(workflow);
   await runTelegramNodeUnitChecks(workflow);
