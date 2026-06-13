@@ -32,6 +32,11 @@ must not be committed.
 available for this installation because no Business/Enterprise license is
 present.
 
+**Alert Query History**: The operational history of job-alert query quality for
+`Job Search Email Alerts`. It is stored in the n8n Data Table
+`job_alert_query_history`, one row per query and cycle, so it can be inspected
+or reset from the n8n UI.
+
 ## Current Decisions
 
 - The strategic source of truth for job-search positioning, role families,
@@ -51,6 +56,9 @@ present.
 - Version workflow JSON in clear text after review.
 - Version credential export backups only when they are non-decrypted and
   SOPS-encrypted.
+- Store `Job Search Email Alerts` query-quality history in the n8n Data Table
+  `job_alert_query_history`, not workflow static data, so test runs can be reset
+  manually and the rolling 5-cycle recommendation window remains auditable.
 
 ## Open Questions
 

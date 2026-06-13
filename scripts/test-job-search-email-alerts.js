@@ -257,13 +257,52 @@ function validateWorkflowGraph(workflow) {
   if (historyNode.type !== 'n8n-nodes-base.code') {
     throw new Error('Update Query History must be a Code node');
   }
+  const prepareHistoryRowsNode = workflowNode(workflow, 'Prepare Query History Rows');
+  const ensureHistoryTableNode = workflowNode(workflow, 'Ensure Query History Table');
+  const replayHistoryRowsNode = workflowNode(workflow, 'Replay Query History Rows');
+  const upsertHistoryRowNode = workflowNode(workflow, 'Upsert Query History Row');
+  const loadHistoryRowsNode = workflowNode(workflow, 'Load Query History Rows');
+  if (prepareHistoryRowsNode.type !== 'n8n-nodes-base.code') throw new Error('Prepare Query History Rows must be a Code node');
+  if (ensureHistoryTableNode.type !== 'n8n-nodes-base.dataTable' || ensureHistoryTableNode.parameters?.resource !== 'table' || ensureHistoryTableNode.parameters?.operation !== 'create') {
+    throw new Error('Ensure Query History Table must create the Data Table if needed');
+  }
+  if (ensureHistoryTableNode.parameters?.tableName !== 'job_alert_query_history') {
+    throw new Error('Ensure Query History Table must use job_alert_query_history');
+  }
+  if (replayHistoryRowsNode.type !== 'n8n-nodes-base.code') throw new Error('Replay Query History Rows must be a Code node');
+  if (upsertHistoryRowNode.type !== 'n8n-nodes-base.dataTable' || upsertHistoryRowNode.parameters?.operation !== 'upsert') {
+    throw new Error('Upsert Query History Row must upsert Data Table rows');
+  }
+  if (loadHistoryRowsNode.type !== 'n8n-nodes-base.dataTable' || loadHistoryRowsNode.parameters?.operation !== 'get' || loadHistoryRowsNode.parameters?.returnAll !== true) {
+    throw new Error('Load Query History Rows must load all Data Table history rows');
+  }
   const falseTargets = workflow.connections?.['Has Enrichment Requests?']?.main?.[1]?.map(edge => edge.node) || [];
-  if (!falseTargets.includes('Update Query History')) {
-    throw new Error('Has Enrichment Requests? false path must go through Update Query History before delivery');
+  if (!falseTargets.includes('Prepare Query History Rows')) {
+    throw new Error('Has Enrichment Requests? false path must prepare Data Table history rows before delivery');
   }
   const mergeTargets = workflow.connections?.['Merge Enriched Alert Report']?.main?.[0]?.map(edge => edge.node) || [];
-  if (!mergeTargets.includes('Update Query History')) {
-    throw new Error('Merge Enriched Alert Report must feed Update Query History before delivery');
+  if (!mergeTargets.includes('Prepare Query History Rows')) {
+    throw new Error('Merge Enriched Alert Report must prepare Data Table history rows before delivery');
+  }
+  const prepareHistoryTargets = workflow.connections?.['Prepare Query History Rows']?.main?.[0]?.map(edge => edge.node) || [];
+  const ensureHistoryTargets = workflow.connections?.['Ensure Query History Table']?.main?.[0]?.map(edge => edge.node) || [];
+  const replayHistoryTargets = workflow.connections?.['Replay Query History Rows']?.main?.[0]?.map(edge => edge.node) || [];
+  const upsertHistoryTargets = workflow.connections?.['Upsert Query History Row']?.main?.[0]?.map(edge => edge.node) || [];
+  const loadHistoryTargets = workflow.connections?.['Load Query History Rows']?.main?.[0]?.map(edge => edge.node) || [];
+  if (!prepareHistoryTargets.includes('Ensure Query History Table')) {
+    throw new Error('Prepare Query History Rows must feed Ensure Query History Table');
+  }
+  if (!ensureHistoryTargets.includes('Replay Query History Rows')) {
+    throw new Error('Ensure Query History Table must feed Replay Query History Rows');
+  }
+  if (!replayHistoryTargets.includes('Upsert Query History Row')) {
+    throw new Error('Replay Query History Rows must feed Upsert Query History Row');
+  }
+  if (!upsertHistoryTargets.includes('Load Query History Rows')) {
+    throw new Error('Upsert Query History Row must feed Load Query History Rows');
+  }
+  if (!loadHistoryTargets.includes('Update Query History')) {
+    throw new Error('Load Query History Rows must feed Update Query History');
   }
   const historyTargets = workflow.connections?.['Update Query History']?.main?.[0]?.map(edge => edge.node) || [];
   if (!historyTargets.includes('Delivery Settings')) {
@@ -341,8 +380,14 @@ async function runEmailDigestNode(code, report) {
   return runCode(code, [{ json: report }]);
 }
 
-async function runQueryHistoryNode(code, report, workflowStaticData) {
-  return runCode(code, [{ json: report }], {}, { workflowStaticData });
+async function runPrepareQueryHistoryRowsNode(code, report) {
+  return runCodeItems(code, [{ json: report }]);
+}
+
+async function runQueryHistoryNode(code, report, historyRows) {
+  return runCode(code, historyRows.map(row => ({ json: row })), {
+    'Prepare Query History Rows': [{ json: { report } }]
+  });
 }
 
 async function runParseNodeUnitChecks(workflow) {
@@ -384,33 +429,55 @@ async function runParseNodeUnitChecks(workflow) {
 }
 
 async function runQueryHistoryNodeUnitChecks(workflow) {
+  const prepareCode = codeNode(workflow, 'Prepare Query History Rows');
   const historyCode = codeNode(workflow, 'Update Query History');
-  const workflowStaticData = {};
-  let report;
-  for (let index = 0; index < 5; index += 1) {
-    report = await runQueryHistoryNode(historyCode, {
-      generatedAt: '2026-06-1' + index + 'T00:00:00.000Z',
-      queryHealth: [{
-        query: 'Engineering Leadership',
-        narrative: 'Technical Leadership for Delivery, Scale and Execution',
-        aliases: ['Head Of Engineering'],
-        jobs: 4,
-        apply: 0,
-        highInterest: 1,
-        manualInspection: 1,
-        ignored: 2,
-        belowThreshold: 0,
-        signalCount: 2,
-        primaryNarrativeFitRate: 0.75,
-        manualInspectionRate: 0.5,
-        outOfNarrativeNoiseRate: 0.25,
-        outOfScopeRate: 0,
-        recommendation: 'keep',
-        recommendationReason: 'consistent narrative fit with at least one relevant signal',
-        status: 'strong'
-      }]
-    }, workflowStaticData);
+  const baseQueryHealth = {
+    query: 'Engineering Leadership',
+    narrative: 'Technical Leadership for Delivery, Scale and Execution',
+    aliases: ['Head Of Engineering'],
+    jobs: 4,
+    apply: 0,
+    highInterest: 1,
+    manualInspection: 1,
+    ignored: 2,
+    belowThreshold: 0,
+    signalCount: 2,
+    primaryNarrativeFitRate: 0.75,
+    manualInspectionRate: 0.5,
+    outOfNarrativeNoiseRate: 0.25,
+    outOfScopeRate: 0,
+    recommendation: 'keep',
+    recommendationReason: 'consistent narrative fit with at least one relevant signal',
+    status: 'strong'
+  };
+  const currentReport = {
+    generatedAt: '2026-06-14T00:00:00.000Z',
+    queryHealth: [baseQueryHealth]
+  };
+  const preparedRows = await runPrepareQueryHistoryRowsNode(prepareCode, currentReport);
+  const prepared = preparedRows[0]?.json;
+  if (!prepared || prepared.queryKey !== 'Engineering Leadership' || prepared.cycleAt !== currentReport.generatedAt) {
+    throw new Error('Prepare Query History Rows must emit one Data Table row per query/cycle');
   }
+  if (prepared.report !== currentReport) {
+    throw new Error('Prepare Query History Rows must carry the source report for downstream digest generation');
+  }
+
+  const historyRows = [];
+  for (let index = 0; index < 5; index += 1) {
+    historyRows.push({
+      queryKey: 'Engineering Leadership',
+      cycleAt: '2026-06-1' + index + 'T00:00:00.000Z',
+      jobs: 4,
+      signalCount: 2,
+      primaryNarrativeFitRate: 0.75,
+      manualInspectionRate: 0.5,
+      outOfNarrativeNoiseRate: 0.25,
+      outOfScopeRate: 0,
+      status: 'strong'
+    });
+  }
+  const report = await runQueryHistoryNode(historyCode, currentReport, historyRows);
   const item = report.queryHealth?.[0];
   if (!item || item.observedCycles !== 5 || item.historyWindowUsed !== 5) {
     throw new Error('Update Query History must keep a rolling five-cycle window per query');
@@ -421,8 +488,8 @@ async function runQueryHistoryNodeUnitChecks(workflow) {
   if (item.currentCycleRecommendation !== 'keep' || !/five-cycle history/.test(item.recommendationReason || '')) {
     throw new Error('Update Query History must preserve current-cycle recommendation and replace delivery recommendation with the historical decision');
   }
-  if (!workflowStaticData.jobSearchAlertQueryHistory?.['Engineering Leadership'] || workflowStaticData.jobSearchAlertQueryHistory['Engineering Leadership'].length !== 5) {
-    throw new Error('Update Query History must persist rolling history in workflow static data');
+  if ('jobSearchAlertQueryHistory' in report) {
+    throw new Error('Update Query History must not persist history in workflow static data');
   }
 }
 

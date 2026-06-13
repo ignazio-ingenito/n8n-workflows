@@ -113,10 +113,16 @@ manualmente una credenziale Gmail al nodo `Send Digest Email`.
 record come `alertQuery` e produce `queryHealth`, una sintesi per gruppo
 canonico di query. Alias equivalenti, per esempio `CTO` e `Chief Technology
 Officer`, vengono aggregati nello stesso gruppo mantenendo i nomi originali in
-`aliases`. La sezione riporta conteggio job, segnali utili, priorità
-massima/media e stato operativo (`strong`, `promising`, `selective`, `watch`,
-`noisy`, `no_signal`). La stessa sezione appare nei digest email e Telegram per
+`aliases`. La sezione riporta conteggio job, segnali utili, narrative fit,
+rumore e raccomandazione operativa (`keep`, `observe`, `narrow`,
+`retire_candidate`). La stessa sezione appare nei digest email e Telegram per
 capire quali alert conviene tenere, restringere o eliminare.
+
+La memoria storica delle query vive nella Data Table n8n
+`job_alert_query_history`: il workflow crea la tabella se manca, salva una riga
+per query/ciclo e calcola le raccomandazioni sugli ultimi 5 cicli per query.
+Per rifare un test senza contaminare il primo ciclo reale, svuota manualmente
+questa Data Table dalla UI n8n prima di rilanciare il workflow.
 
 Per il workflow email va associata manualmente una credenziale Gmail al nodo
 `Scan Job Alert Emails` dopo l'import. Il nodo scansiona le email non lette

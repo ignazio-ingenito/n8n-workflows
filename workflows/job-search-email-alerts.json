@@ -730,14 +730,198 @@
     },
     {
       "parameters": {
-        "jsCode": "const windowSize = 5;\nconst fallbackStaticData = {};\n\nfunction staticStore() {\n  try {\n    if (typeof $getWorkflowStaticData === 'function') {\n      const data = $getWorkflowStaticData('global');\n      if (data && typeof data === 'object') return data;\n    }\n  } catch (error) {}\n  try {\n    if (typeof getWorkflowStaticData === 'function') {\n      const data = getWorkflowStaticData('global');\n      if (data && typeof data === 'object') return data;\n    }\n  } catch (error) {}\n  return fallbackStaticData;\n}\n\nfunction round2(value) {\n  return Number((Number(value) || 0).toFixed(2));\n}\n\nfunction average(items, key) {\n  if (!items.length) return 0;\n  return round2(items.reduce((sum, item) => sum + (Number(item[key]) || 0), 0) / items.length);\n}\n\nfunction recommendFromHistory(history) {\n  const observedCycles = history.length;\n  const avgPrimaryNarrativeFitRate = average(history, 'primaryNarrativeFitRate');\n  const avgManualInspectionRate = average(history, 'manualInspectionRate');\n  const avgNoiseRate = average(history, 'outOfNarrativeNoiseRate');\n  const avgOutOfScopeRate = average(history, 'outOfScopeRate');\n  const signalCycles = history.filter(item => (Number(item.signalCount) || 0) > 0).length;\n\n  if (observedCycles < windowSize) {\n    return {\n      recommendation: 'observe',\n      recommendationReason: 'observed ' + observedCycles + '/' + windowSize + ' cycles; collect more evidence before changing the alert',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  if (avgPrimaryNarrativeFitRate >= 0.55 && signalCycles >= 2 && avgNoiseRate <= 0.45) {\n    return {\n      recommendation: 'keep',\n      recommendationReason: 'five-cycle history shows durable narrative fit with controlled noise',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  if (avgPrimaryNarrativeFitRate === 0 && avgNoiseRate >= 0.8 && signalCycles === 0) {\n    return {\n      recommendation: 'retire_candidate',\n      recommendationReason: 'five-cycle history produced only out-of-narrative noise',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  if (avgNoiseRate >= 0.5 || avgOutOfScopeRate >= 0.3) {\n    return {\n      recommendation: 'narrow',\n      recommendationReason: 'five-cycle history shows recurring noise despite some relevant signals',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  return {\n    recommendation: 'observe',\n    recommendationReason: 'five-cycle history is still inconclusive; keep observing before changing the alert',\n    observedCycles,\n    signalCycles,\n    avgPrimaryNarrativeFitRate,\n    avgManualInspectionRate,\n    avgNoiseRate,\n    avgOutOfScopeRate\n  };\n}\n\nconst report = $input.first().json;\nconst cycleAt = report.generatedAt || new Date().toISOString();\nconst store = staticStore();\nconst historyRoot = store.jobSearchAlertQueryHistory = store.jobSearchAlertQueryHistory || {};\nconst queryHealth = Array.isArray(report.queryHealth) ? report.queryHealth : [];\n\nconst updatedQueryHealth = queryHealth.map(item => {\n  const key = String(item.query || 'unknown');\n  const history = Array.isArray(historyRoot[key]) ? historyRoot[key] : [];\n  const snapshot = {\n    cycleAt,\n    jobs: Number(item.jobs) || 0,\n    signalCount: Number(item.signalCount) || 0,\n    primaryNarrativeFitRate: Number(item.primaryNarrativeFitRate) || 0,\n    manualInspectionRate: Number(item.manualInspectionRate) || 0,\n    outOfNarrativeNoiseRate: Number(item.outOfNarrativeNoiseRate) || 0,\n    outOfScopeRate: Number(item.outOfScopeRate) || 0,\n    status: String(item.status || 'unknown')\n  };\n  const nextHistory = history.filter(entry => entry && entry.cycleAt !== cycleAt);\n  nextHistory.push(snapshot);\n  const trimmedHistory = nextHistory.slice(-windowSize);\n  historyRoot[key] = trimmedHistory;\n\n  const recommendation = recommendFromHistory(trimmedHistory);\n\n  return {\n    ...item,\n    currentCycleRecommendation: item.recommendation || 'observe',\n    currentCycleRecommendationReason: item.recommendationReason || '',\n    recommendation: recommendation.recommendation,\n    recommendationReason: recommendation.recommendationReason,\n    observationWindow: windowSize,\n    observationPolicy: 'observe_for_' + windowSize + '_cycles_before_alert_changes',\n    observedCycles: recommendation.observedCycles,\n    signalCycles: recommendation.signalCycles,\n    avgPrimaryNarrativeFitRate: recommendation.avgPrimaryNarrativeFitRate,\n    avgManualInspectionRate: recommendation.avgManualInspectionRate,\n    avgNoiseRate: recommendation.avgNoiseRate,\n    avgOutOfScopeRate: recommendation.avgOutOfScopeRate,\n    lastSeenAt: cycleAt,\n    historyWindowUsed: trimmedHistory.length\n  };\n});\n\nreturn [{\n  json: {\n    ...report,\n    queryHealth: updatedQueryHealth\n  }\n}];"
+        "jsCode": "const report = $input.first().json;\nconst cycleAt = report.generatedAt || new Date().toISOString();\nconst queryHealth = Array.isArray(report.queryHealth) ? report.queryHealth : [];\n\nreturn queryHealth.map((item, index) => ({\n  json: {\n    report,\n    queryKey: String(item.query || 'unknown'),\n    canonicalGroup: String(item.query || 'unknown'),\n    narrative: String(item.narrative || 'Unclassified'),\n    aliasesJson: JSON.stringify(Array.isArray(item.aliases) ? item.aliases : []),\n    cycleAt,\n    jobs: Number(item.jobs) || 0,\n    signalCount: Number(item.signalCount) || 0,\n    primaryNarrativeFitRate: Number(item.primaryNarrativeFitRate) || 0,\n    manualInspectionRate: Number(item.manualInspectionRate) || 0,\n    outOfNarrativeNoiseRate: Number(item.outOfNarrativeNoiseRate) || 0,\n    outOfScopeRate: Number(item.outOfScopeRate) || 0,\n    currentRecommendation: String(item.recommendation || 'observe'),\n    currentRecommendationReason: String(item.recommendationReason || ''),\n    status: String(item.status || 'unknown')\n  },\n  pairedItem: { item: index }\n}));"
+      },
+      "id": "prepare-query-history-rows-job-search-email-alerts",
+      "name": "Prepare Query History Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "job_alert_query_history",
+        "columns": {
+          "column": [
+            {
+              "name": "queryKey",
+              "type": "string"
+            },
+            {
+              "name": "canonicalGroup",
+              "type": "string"
+            },
+            {
+              "name": "narrative",
+              "type": "string"
+            },
+            {
+              "name": "aliasesJson",
+              "type": "string"
+            },
+            {
+              "name": "cycleAt",
+              "type": "date"
+            },
+            {
+              "name": "jobs",
+              "type": "number"
+            },
+            {
+              "name": "signalCount",
+              "type": "number"
+            },
+            {
+              "name": "primaryNarrativeFitRate",
+              "type": "number"
+            },
+            {
+              "name": "manualInspectionRate",
+              "type": "number"
+            },
+            {
+              "name": "outOfNarrativeNoiseRate",
+              "type": "number"
+            },
+            {
+              "name": "outOfScopeRate",
+              "type": "number"
+            },
+            {
+              "name": "currentRecommendation",
+              "type": "string"
+            },
+            {
+              "name": "currentRecommendationReason",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "ensure-query-history-table-job-search-email-alerts",
+      "name": "Ensure Query History Table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        680,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $('Prepare Query History Rows').all();"
+      },
+      "id": "replay-query-history-rows-job-search-email-alerts",
+      "name": "Replay Query History Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "upsert",
+        "dataTableId": {
+          "mode": "name",
+          "value": "job_alert_query_history"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "queryKey",
+              "condition": "eq",
+              "keyValue": "={{ $json.queryKey }}"
+            },
+            {
+              "keyName": "cycleAt",
+              "condition": "eq",
+              "keyValue": "={{ $json.cycleAt }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "queryKey": "={{ $json.queryKey }}",
+            "canonicalGroup": "={{ $json.canonicalGroup }}",
+            "narrative": "={{ $json.narrative }}",
+            "aliasesJson": "={{ $json.aliasesJson }}",
+            "cycleAt": "={{ $json.cycleAt }}",
+            "jobs": "={{ $json.jobs }}",
+            "signalCount": "={{ $json.signalCount }}",
+            "primaryNarrativeFitRate": "={{ $json.primaryNarrativeFitRate }}",
+            "manualInspectionRate": "={{ $json.manualInspectionRate }}",
+            "outOfNarrativeNoiseRate": "={{ $json.outOfNarrativeNoiseRate }}",
+            "outOfScopeRate": "={{ $json.outOfScopeRate }}",
+            "currentRecommendation": "={{ $json.currentRecommendation }}",
+            "currentRecommendationReason": "={{ $json.currentRecommendationReason }}",
+            "status": "={{ $json.status }}"
+          }
+        }
+      },
+      "id": "upsert-query-history-row-job-search-email-alerts",
+      "name": "Upsert Query History Row",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "mode": "name",
+          "value": "job_alert_query_history"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "condition": "isNotEmpty"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "load-query-history-rows-job-search-email-alerts",
+      "name": "Load Query History Rows",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const windowSize = 5;\n\nfunction round2(value) {\n  return Number((Number(value) || 0).toFixed(2));\n}\n\nfunction average(items, key) {\n  if (!items.length) return 0;\n  return round2(items.reduce((sum, item) => sum + (Number(item[key]) || 0), 0) / items.length);\n}\n\nfunction recommendFromHistory(history) {\n  const observedCycles = history.length;\n  const avgPrimaryNarrativeFitRate = average(history, 'primaryNarrativeFitRate');\n  const avgManualInspectionRate = average(history, 'manualInspectionRate');\n  const avgNoiseRate = average(history, 'outOfNarrativeNoiseRate');\n  const avgOutOfScopeRate = average(history, 'outOfScopeRate');\n  const signalCycles = history.filter(item => (Number(item.signalCount) || 0) > 0).length;\n\n  if (observedCycles < windowSize) {\n    return {\n      recommendation: 'observe',\n      recommendationReason: 'observed ' + observedCycles + '/' + windowSize + ' cycles; collect more evidence before changing the alert',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  if (avgPrimaryNarrativeFitRate >= 0.55 && signalCycles >= 2 && avgNoiseRate <= 0.45) {\n    return {\n      recommendation: 'keep',\n      recommendationReason: 'five-cycle history shows durable narrative fit with controlled noise',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  if (avgPrimaryNarrativeFitRate === 0 && avgNoiseRate >= 0.8 && signalCycles === 0) {\n    return {\n      recommendation: 'retire_candidate',\n      recommendationReason: 'five-cycle history produced only out-of-narrative noise',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  if (avgNoiseRate >= 0.5 || avgOutOfScopeRate >= 0.3) {\n    return {\n      recommendation: 'narrow',\n      recommendationReason: 'five-cycle history shows recurring noise despite some relevant signals',\n      observedCycles,\n      signalCycles,\n      avgPrimaryNarrativeFitRate,\n      avgManualInspectionRate,\n      avgNoiseRate,\n      avgOutOfScopeRate\n    };\n  }\n\n  return {\n    recommendation: 'observe',\n    recommendationReason: 'five-cycle history is still inconclusive; keep observing before changing the alert',\n    observedCycles,\n    signalCycles,\n    avgPrimaryNarrativeFitRate,\n    avgManualInspectionRate,\n    avgNoiseRate,\n    avgOutOfScopeRate\n  };\n}\n\nfunction asHistoryRow(row) {\n  return {\n    cycleAt: String(row.cycleAt || ''),\n    jobs: Number(row.jobs) || 0,\n    signalCount: Number(row.signalCount) || 0,\n    primaryNarrativeFitRate: Number(row.primaryNarrativeFitRate) || 0,\n    manualInspectionRate: Number(row.manualInspectionRate) || 0,\n    outOfNarrativeNoiseRate: Number(row.outOfNarrativeNoiseRate) || 0,\n    outOfScopeRate: Number(row.outOfScopeRate) || 0,\n    status: String(row.status || 'unknown')\n  };\n}\n\nconst prepared = $('Prepare Query History Rows').first().json;\nconst report = prepared.report || {};\nconst historyRows = $input.all().map(item => item.json || {});\nconst queryHealth = Array.isArray(report.queryHealth) ? report.queryHealth : [];\n\nconst updatedQueryHealth = queryHealth.map(item => {\n  const key = String(item.query || 'unknown');\n  const history = historyRows\n    .filter(row => String(row.queryKey || '') === key)\n    .map(asHistoryRow)\n    .filter(row => row.cycleAt)\n    .sort((a, b) => a.cycleAt.localeCompare(b.cycleAt))\n    .slice(-windowSize);\n\n  const recommendation = recommendFromHistory(history);\n\n  return {\n    ...item,\n    currentCycleRecommendation: item.recommendation || 'observe',\n    currentCycleRecommendationReason: item.recommendationReason || '',\n    recommendation: recommendation.recommendation,\n    recommendationReason: recommendation.recommendationReason,\n    observationWindow: windowSize,\n    observationPolicy: 'observe_for_' + windowSize + '_cycles_before_alert_changes',\n    observedCycles: recommendation.observedCycles,\n    signalCycles: recommendation.signalCycles,\n    avgPrimaryNarrativeFitRate: recommendation.avgPrimaryNarrativeFitRate,\n    avgManualInspectionRate: recommendation.avgManualInspectionRate,\n    avgNoiseRate: recommendation.avgNoiseRate,\n    avgOutOfScopeRate: recommendation.avgOutOfScopeRate,\n    lastSeenAt: history.at(-1)?.cycleAt || report.generatedAt || new Date().toISOString(),\n    historyWindowUsed: history.length\n  };\n});\n\nreturn [{\n  json: {\n    ...report,\n    queryHealth: updatedQueryHealth\n  }\n}];"
       },
       "id": "update-query-history-job-search-email-alerts",
       "name": "Update Query History",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        680,
+        1980,
         0
       ]
     },
@@ -982,7 +1166,7 @@
         ],
         [
           {
-            "node": "Update Query History",
+            "node": "Prepare Query History Rows",
             "type": "main",
             "index": 0
           }
@@ -1015,7 +1199,7 @@
       "main": [
         [
           {
-            "node": "Update Query History",
+            "node": "Prepare Query History Rows",
             "type": "main",
             "index": 0
           }
@@ -1188,6 +1372,61 @@
         [
           {
             "node": "Processed Email Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Query History Rows": {
+      "main": [
+        [
+          {
+            "node": "Ensure Query History Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Query History Table": {
+      "main": [
+        [
+          {
+            "node": "Replay Query History Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replay Query History Rows": {
+      "main": [
+        [
+          {
+            "node": "Upsert Query History Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Query History Row": {
+      "main": [
+        [
+          {
+            "node": "Load Query History Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Query History Rows": {
+      "main": [
+        [
+          {
+            "node": "Update Query History",
             "type": "main",
             "index": 0
           }
