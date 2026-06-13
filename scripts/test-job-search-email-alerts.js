@@ -29,8 +29,56 @@ function workflowNode(workflow, name) {
   return node;
 }
 
+function hasOwn(object, key) {
+  return !!object && Object.prototype.hasOwnProperty.call(object, key);
+}
+
 function hasInvalidTelegramHtmlEntity(value) {
   return /&(?!amp;|lt;|gt;|quot;|#\d+;|#x[0-9a-fA-F]+;)/.test(String(value || ''));
+}
+
+function observationWindowError(value) {
+  if (Number.isInteger(value) && value > 0) return null;
+  if (typeof value === 'string' && value.trim() && /\d/.test(value)) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return 'must be a positive cycle count, a non-empty cycle string, or an object with cycle counters';
+  }
+
+  const numericKeys = ['cyclesObserved', 'targetCycles', 'remainingCycles', 'currentCycle', 'decisionAfterCycles'];
+  const presentNumericKeys = numericKeys.filter(key => Number.isFinite(value[key]));
+  if (!presentNumericKeys.length) {
+    return 'must contain at least one numeric cycle counter';
+  }
+  if (presentNumericKeys.some(key => value[key] < 0)) {
+    return 'must not contain negative cycle counters';
+  }
+  if (Number.isFinite(value.targetCycles) && value.targetCycles <= 0) {
+    return 'targetCycles must be greater than zero';
+  }
+  return null;
+}
+
+function assertQueryHealthRecommendationShape(item, context, { required = false } = {}) {
+  const hasRecommendationFields = ['recommendation', 'recommendationReason', 'observationWindow']
+    .some(key => hasOwn(item, key));
+
+  if (!hasRecommendationFields) {
+    if (required) {
+      throw new Error(`${context} must include recommendation, recommendationReason, and observationWindow`);
+    }
+    return;
+  }
+
+  if (typeof item.recommendation !== 'string' || !item.recommendation.trim()) {
+    throw new Error(`${context} must expose a non-empty recommendation string`);
+  }
+  if (typeof item.recommendationReason !== 'string' || !item.recommendationReason.trim()) {
+    throw new Error(`${context} must expose a non-empty recommendationReason string`);
+  }
+  const observationError = observationWindowError(item.observationWindow);
+  if (observationError) {
+    throw new Error(`${context} has an invalid observationWindow: ${observationError}`);
+  }
 }
 
 function assertTelegramNodeUsesHtmlParseMode(workflow) {
@@ -95,6 +143,22 @@ function validateWorkflowGraph(workflow) {
   if (operation !== 'gt') {
     throw new Error(`Has Enrichment Requests? must use n8n number operation "gt", got "${operation}"`);
   }
+  const historyNode = workflowNode(workflow, 'Update Query History');
+  if (historyNode.type !== 'n8n-nodes-base.code') {
+    throw new Error('Update Query History must be a Code node');
+  }
+  const falseTargets = workflow.connections?.['Has Enrichment Requests?']?.main?.[1]?.map(edge => edge.node) || [];
+  if (!falseTargets.includes('Update Query History')) {
+    throw new Error('Has Enrichment Requests? false path must go through Update Query History before delivery');
+  }
+  const mergeTargets = workflow.connections?.['Merge Enriched Alert Report']?.main?.[0]?.map(edge => edge.node) || [];
+  if (!mergeTargets.includes('Update Query History')) {
+    throw new Error('Merge Enriched Alert Report must feed Update Query History before delivery');
+  }
+  const historyTargets = workflow.connections?.['Update Query History']?.main?.[0]?.map(edge => edge.node) || [];
+  if (!historyTargets.includes('Delivery Settings')) {
+    throw new Error('Update Query History must feed Delivery Settings');
+  }
   assertTelegramNodeUsesHtmlParseMode(workflow);
   assertEmailDigestDelivery(workflow);
   assertGmailBacklogScan(workflow);
@@ -107,7 +171,8 @@ function fixtureFiles(dir) {
     .map(file => path.join(dir, file));
 }
 
-async function runCodeItems(code, inputItems, referencedNodeItems = {}) {
+async function runCodeItems(code, inputItems, referencedNodeItems = {}, runtime = {}) {
+  const workflowStaticData = runtime.workflowStaticData || {};
   const output = await vm.runInNewContext(`(async function(){${code}
 })()`, {
     $input: {
@@ -123,6 +188,8 @@ async function runCodeItems(code, inputItems, referencedNodeItems = {}) {
       name,
       { json: items[0]?.json || {} }
     ])),
+    $getWorkflowStaticData: () => workflowStaticData,
+    getWorkflowStaticData: () => workflowStaticData,
     console
   }, { timeout: 5000 });
 
@@ -132,8 +199,8 @@ async function runCodeItems(code, inputItems, referencedNodeItems = {}) {
   return output;
 }
 
-async function runCode(code, inputItems, referencedNodeItems = {}) {
-  const output = await runCodeItems(code, inputItems, referencedNodeItems);
+async function runCode(code, inputItems, referencedNodeItems = {}, runtime = {}) {
+  const output = await runCodeItems(code, inputItems, referencedNodeItems, runtime);
   if (!output[0]) throw new Error('Code node returned no items');
   return output[0].json;
 }
@@ -161,6 +228,91 @@ async function runTelegramNode(code, report) {
 
 async function runEmailDigestNode(code, report) {
   return runCode(code, [{ json: report }]);
+}
+
+async function runQueryHistoryNode(code, report, workflowStaticData) {
+  return runCode(code, [{ json: report }], {}, { workflowStaticData });
+}
+
+async function runParseNodeUnitChecks(workflow) {
+  const parseCode = codeNode(workflow, 'Parse and Score Alerts');
+  const fixture = {
+    id: 'unit-platform-mismatch',
+    subject: 'Platform Engineering Lead',
+    from: 'jobalerts-noreply@linkedin.com',
+    date: '2026-06-12T00:00:00.000Z',
+    textPlain: [
+      'Il tuo avviso di offerte di lavoro e stato creato: Platform Engineering Lead (Italia).',
+      'Riceverai notifiche quando vengono pubblicate nuove offerte di lavoro che corrispondono alle tue preferenze di ricerca.',
+      '',
+      'Director of Engineering',
+      'Jobgether',
+      'Italia',
+      '',
+      'Candidati con curriculum e profilo',
+      'Visualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4424508735'
+    ].join('\n'),
+    text: '',
+    textHtml: '',
+    html: ''
+  };
+  const report = await runParseNode(parseCode, fixture);
+  const record = report.records?.find(item => item.url === 'https://www.linkedin.com/comm/jobs/view/4424508735');
+  if (!record) {
+    throw new Error('Parse and Score Alerts must extract the platform-mismatch unit record');
+  }
+  if (record.queryAlignmentStatus !== 'mismatch') {
+    throw new Error(`Expected platform-mismatch record to have queryAlignmentStatus=mismatch, got "${record.queryAlignmentStatus}"`);
+  }
+  if (record.recommendedAction === 'inspect manually') {
+    throw new Error('Parse and Score Alerts must not keep generic engineering leadership roles as manual inspection for platform alerts');
+  }
+  if (record.dataPoor !== false) {
+    throw new Error('Parse and Score Alerts must disable the dataPoor manual-review override for query mismatches');
+  }
+}
+
+async function runQueryHistoryNodeUnitChecks(workflow) {
+  const historyCode = codeNode(workflow, 'Update Query History');
+  const workflowStaticData = {};
+  let report;
+  for (let index = 0; index < 5; index += 1) {
+    report = await runQueryHistoryNode(historyCode, {
+      generatedAt: '2026-06-1' + index + 'T00:00:00.000Z',
+      queryHealth: [{
+        query: 'Engineering Leadership',
+        narrative: 'Technical Leadership for Delivery, Scale and Execution',
+        aliases: ['Head Of Engineering'],
+        jobs: 4,
+        apply: 0,
+        highInterest: 1,
+        manualInspection: 1,
+        ignored: 2,
+        belowThreshold: 0,
+        signalCount: 2,
+        primaryNarrativeFitRate: 0.75,
+        manualInspectionRate: 0.5,
+        outOfNarrativeNoiseRate: 0.25,
+        outOfScopeRate: 0,
+        recommendation: 'keep',
+        recommendationReason: 'consistent narrative fit with at least one relevant signal',
+        status: 'strong'
+      }]
+    }, workflowStaticData);
+  }
+  const item = report.queryHealth?.[0];
+  if (!item || item.observedCycles !== 5 || item.historyWindowUsed !== 5) {
+    throw new Error('Update Query History must keep a rolling five-cycle window per query');
+  }
+  if (item.recommendation !== 'keep') {
+    throw new Error('Update Query History must promote a consistently good query to keep after five cycles');
+  }
+  if (item.currentCycleRecommendation !== 'keep' || !/five-cycle history/.test(item.recommendationReason || '')) {
+    throw new Error('Update Query History must preserve current-cycle recommendation and replace delivery recommendation with the historical decision');
+  }
+  if (!workflowStaticData.jobSearchAlertQueryHistory?.['Engineering Leadership'] || workflowStaticData.jobSearchAlertQueryHistory['Engineering Leadership'].length !== 5) {
+    throw new Error('Update Query History must persist rolling history in workflow static data');
+  }
 }
 
 async function runMergeNodeUnitChecks(workflow) {
@@ -221,6 +373,7 @@ async function runMergeNodeUnitChecks(workflow) {
   if (!report.queryHealth[0]?.aliases?.includes('Platform Engineering Lead')) {
     throw new Error('Merge Enriched Alert Report must preserve original alert query aliases inside queryHealth');
   }
+  assertQueryHealthRecommendationShape(report.queryHealth[0], 'Merge Enriched Alert Report queryHealth[0]');
 }
 
 async function runEmailDigestNodeUnitChecks(workflow) {
@@ -230,21 +383,23 @@ async function runEmailDigestNodeUnitChecks(workflow) {
     emailCount: 2,
     parsedCount: 2,
     matches: [{
-      title: 'AI & Data Manager',
-      company: 'Costa Crociere S.p.A.',
+      title: 'Head of Platform',
+      company: 'Example Corp',
       url: 'https://www.linkedin.com/comm/jobs/view/1',
       source: 'LinkedIn alert email',
-      alertQuery: 'AI Lead',
+      alertQuery: 'Platform Engineering Lead',
       recommendedAction: 'inspect manually',
       applicationPriorityScore: 69,
       profileFitScore: 60,
+      primaryNarrative: 'Platform Modernization & Reliability',
+      secondaryNarrative: 'Technical Leadership for Delivery, Scale and Execution',
       enrichmentStatus: 'login_wall'
     }],
     queryHealth: [
       {
-        query: 'AI Leadership',
-        narrative: 'AI / Data',
-        aliases: ['AI Lead', 'Applied AI Lead'],
+        query: 'Platform / Cloud / DevOps',
+        narrative: 'Platform Modernization & Reliability',
+        aliases: ['Platform Engineering Lead', 'Head of Platform'],
         alertEmailCount: 2,
         jobs: 1,
         apply: 0,
@@ -255,11 +410,20 @@ async function runEmailDigestNodeUnitChecks(workflow) {
         maxPriority: 69,
         avgPriority: 69,
         signalCount: 1,
-        status: 'strong'
+        primaryNarrativeFitRate: 1,
+        manualInspectionRate: 1,
+        outOfNarrativeNoiseRate: 0,
+        outOfScopeRate: 0,
+        status: 'strong',
+        recommendation: 'keep',
+        recommendationReason: 'High narrative fit with clean signal quality across the observed jobs.',
+        currentCycleRecommendation: 'inspect manually',
+        currentCycleRecommendationReason: 'Current cycle still needs operator review before the history window closes.',
+        observationWindow: { cyclesObserved: 2, targetCycles: 5 }
       },
       {
         query: 'Engineering Management',
-        narrative: 'Engineering Leadership',
+        narrative: 'Technical Leadership for Delivery, Scale and Execution',
         aliases: ['Engineering Manager'],
         jobs: 2,
         apply: 0,
@@ -270,7 +434,16 @@ async function runEmailDigestNodeUnitChecks(workflow) {
         maxPriority: 24,
         avgPriority: 24,
         signalCount: 0,
-        status: 'no_signal'
+        primaryNarrativeFitRate: 0.5,
+        manualInspectionRate: 0,
+        outOfNarrativeNoiseRate: 0.5,
+        outOfScopeRate: 0,
+        status: 'no_signal',
+        recommendation: 'observe',
+        recommendationReason: 'Wait for more cycles before narrowing or retiring this query.',
+        currentCycleRecommendation: 'ignore',
+        currentCycleRecommendationReason: 'Current cycle produced no narrative signal.',
+        observationWindow: { cyclesObserved: 2, targetCycles: 5 }
       }
     ],
     records: [
@@ -296,6 +469,9 @@ async function runEmailDigestNodeUnitChecks(workflow) {
       }
     ]
   };
+  report.queryHealth.forEach((item, index) => {
+    assertQueryHealthRecommendationShape(item, `Build Email Digest unit queryHealth[${index}]`, { required: true });
+  });
   const result = await runEmailDigestNode(emailCode, report);
   if (!/Job Search Email Alerts - 2026-06-12 00:00 UTC - 1 da valutare/.test(result.emailSubject || '')) {
     throw new Error('Build Email Digest must generate a useful subject with the review count');
@@ -303,17 +479,28 @@ async function runEmailDigestNodeUnitChecks(workflow) {
   if (!/Email messages: 2/.test(result.emailText || '') || !/Jobs parsed: 2/.test(result.emailText || '')) {
     throw new Error('Build Email Digest must include email and job counts in the plain text body');
   }
-  if (!/1\. AI &amp; Data Manager/.test(result.emailHtml || '')) {
+  if (!/Platform Modernization &amp; Reliability/.test(result.emailHtml || '') || !/1\. Head of Platform/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must HTML-escape job titles and render explicit item numbers in the HTML body');
   }
   if (!/fonts\.googleapis\.com\/css2\?family=Montserrat/.test(result.emailHtml || '') || !/font-family:Montserrat,Arial,sans-serif/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must request Google Montserrat and use it as the primary email font');
   }
-  if (!/Query Health/.test(result.emailText || '') || !/Alert: AI Lead/.test(result.emailText || '') || !/AI Leadership - strong/.test(result.emailHtml || '')) {
+  if (!/Alert decisions/.test(result.emailText || '') || !/Platform \/ Cloud \/ DevOps - keep/.test(result.emailText || '') || !/Current cycle: inspect manually/.test(result.emailText || '') || !/Observed: 0\/5 cycles/.test(result.emailText || '')) {
+    throw new Error('Build Email Digest must surface stable alert decisions ahead of detailed query health');
+  }
+  if (!/Recommendation: keep \| Current: inspect manually \| Window: 5 cycles/.test(result.emailText || '') || !(result.emailHtml || '').includes('Current:</span> inspect manually')) {
+    throw new Error('Build Email Digest must expose both historical and current-cycle recommendations in query health');
+  }
+  if (!/Query Health/.test(result.emailText || '') || !/Alert: Platform Engineering Lead/.test(result.emailText || '') || !/Platform \/ Cloud \/ DevOps - strong/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must include alert query health and per-job alert query context');
   }
-  if (!/High interest \(1\)/.test(result.emailHtml || '') || /<ol>|<li>/.test(result.emailHtml || '')) {
+  if (!/High interest \(1\)/.test(result.emailHtml || '') || !/Technical Leadership for Delivery, Scale and Execution/.test(result.emailHtml || '') || /<ol>|<li>/.test(result.emailHtml || '')) {
     throw new Error('Build Email Digest must render email-safe HTML sections without relying on ordered-list markers');
+  }
+  if (/Recommendation|Raccomandazione/i.test((result.emailHtml || '') + '\n' + (result.emailText || ''))) {
+    if (!/keep|observe/i.test((result.emailHtml || '') + '\n' + (result.emailText || '')) || !/5/.test((result.emailHtml || '') + '\n' + (result.emailText || ''))) {
+      throw new Error('Build Email Digest must render useful recommendation details when queryHealth recommendations are included');
+    }
   }
   const engineeringManagerOccurrences = (result.emailText.match(/Engineering Manager - Subito/g) || []).length;
   if (engineeringManagerOccurrences !== 1) {
@@ -328,21 +515,23 @@ async function runTelegramNodeUnitChecks(workflow) {
     emailCount: 1,
     parsedCount: 1,
     matches: [{
-      title: 'AI & Data Manager',
-      company: 'Costa Crociere S.p.A.',
+      title: 'Head of Platform',
+      company: 'Example Corp',
       url: 'https://www.linkedin.com/comm/jobs/view/1',
       source: 'LinkedIn alert email',
-      alertQuery: 'AI Lead',
+      alertQuery: 'Platform Engineering Lead',
       recommendedAction: 'inspect manually',
       applicationPriorityScore: 69,
       profileFitScore: 60,
+      primaryNarrative: 'Platform Modernization & Reliability',
+      secondaryNarrative: 'Technical Leadership for Delivery, Scale and Execution',
       enrichmentStatus: 'fetched'
     }],
     queryHealth: [
       {
-        query: 'AI Leadership',
-        narrative: 'AI / Data',
-        aliases: ['AI Lead', 'Applied AI Lead'],
+        query: 'Platform / Cloud / DevOps',
+        narrative: 'Platform Modernization & Reliability',
+        aliases: ['Platform Engineering Lead', 'Head of Platform'],
         alertEmailCount: 2,
         jobs: 1,
         apply: 0,
@@ -353,11 +542,20 @@ async function runTelegramNodeUnitChecks(workflow) {
         maxPriority: 69,
         avgPriority: 69,
         signalCount: 1,
-        status: 'strong'
+        primaryNarrativeFitRate: 1,
+        manualInspectionRate: 1,
+        outOfNarrativeNoiseRate: 0,
+        outOfScopeRate: 0,
+        status: 'strong',
+        recommendation: 'keep',
+        recommendationReason: 'High narrative fit with clean signal quality across the observed jobs.',
+        currentCycleRecommendation: 'inspect manually',
+        currentCycleRecommendationReason: 'Current cycle still needs operator review before the history window closes.',
+        observationWindow: { cyclesObserved: 2, targetCycles: 5 }
       },
       {
         query: 'Engineering Management',
-        narrative: 'Engineering Leadership',
+        narrative: 'Technical Leadership for Delivery, Scale and Execution',
         aliases: ['Engineering Manager'],
         jobs: 2,
         apply: 0,
@@ -368,7 +566,16 @@ async function runTelegramNodeUnitChecks(workflow) {
         maxPriority: 24,
         avgPriority: 24,
         signalCount: 0,
-        status: 'no_signal'
+        primaryNarrativeFitRate: 0.5,
+        manualInspectionRate: 0,
+        outOfNarrativeNoiseRate: 0.5,
+        outOfScopeRate: 0,
+        status: 'no_signal',
+        recommendation: 'observe',
+        recommendationReason: 'Wait for more cycles before narrowing or retiring this query.',
+        currentCycleRecommendation: 'ignore',
+        currentCycleRecommendationReason: 'Current cycle produced no narrative signal.',
+        observationWindow: { cyclesObserved: 2, targetCycles: 5 }
       }
     ],
     records: [
@@ -394,18 +601,32 @@ async function runTelegramNodeUnitChecks(workflow) {
       }
     ]
   };
+  report.queryHealth.forEach((item, index) => {
+    assertQueryHealthRecommendationShape(item, `Build Telegram Message unit queryHealth[${index}]`, { required: true });
+  });
   const result = await runTelegramNode(telegramCode, report);
   if (!/Email messages: 1/.test(result.telegramMessage || '') || !/Jobs parsed: 1/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must show separate email and parsed job counts');
   }
-  if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\n1\. AI &amp; Data Manager/.test(result.telegramMessage || '')) {
+  if (!/High interest: 1/.test(result.telegramMessage || '') || !/High interest\nPlatform Modernization &amp; Reliability \+ Technical Leadership for Delivery, Scale and Execution\n1\. Head of Platform/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must show high-priority inspect records in the High interest section and HTML-escape Telegram text');
   }
-  if (!/Query Health/.test(result.telegramMessage || '') || !/AI Leadership - strong/.test(result.telegramMessage || '') || !/Alert: AI Lead/.test(result.telegramMessage || '')) {
+  if (!(result.telegramMessage || '').includes('Alert decisions') || !(result.telegramMessage || '').includes('Platform / Cloud / DevOps - keep') || !(result.telegramMessage || '').includes('Current cycle: inspect manually') || !(result.telegramMessage || '').includes('Observed: 0/5 cycles')) {
+    throw new Error('Build Telegram Message must surface stable alert decisions ahead of detailed query health');
+  }
+  if (!(result.telegramMessage || '').toLowerCase().includes('recommendation keep | current inspect manually | window 5 cycles')) {
+    throw new Error('Build Telegram Message must expose both historical and current-cycle recommendations in query health');
+  }
+  if (!/Query Health/.test(result.telegramMessage || '') || !/Platform \/ Cloud \/ DevOps - strong/.test(result.telegramMessage || '') || !/Alert: Platform Engineering Lead/.test(result.telegramMessage || '')) {
     throw new Error('Build Telegram Message must include alert query health and per-job alert query context');
   }
   if (hasInvalidTelegramHtmlEntity(result.telegramMessage)) {
     throw new Error('Build Telegram Message must not emit invalid HTML entities because the Telegram node defaults to HTML parse mode');
+  }
+  if (/Recommendation|Raccomandazione/i.test(result.telegramMessage || '')) {
+    if (!/keep|observe/i.test(result.telegramMessage || '') || !/5/.test(result.telegramMessage || '')) {
+      throw new Error('Build Telegram Message must render useful recommendation details when queryHealth recommendations are included');
+    }
   }
   if (/Manual inspection: 1/.test(result.telegramMessage || '')) {
     throw new Error('High interest records must not also be counted as manual inspection');
@@ -450,7 +671,7 @@ function normalizeTitle(value) {
 }
 
 function isStrongDataPoorTitle(title) {
-  return /\b(chief technology officer|field cto|engineering manager|director of engineering|ai\/?gen ai solution architect|ai solutions? architect|genai lead)\b/i.test(title);
+  return /\b(chief technology officer|field cto|engineering manager|director of engineering)\b/i.test(title);
 }
 
 function evaluate(filePath, report, telegramReport) {
@@ -477,6 +698,13 @@ function evaluate(filePath, report, telegramReport) {
   const queryHealthFailures = expectedAlertQuery && !(report.queryHealth || []).some(item => String(item.query || '').trim().toLowerCase() === expectedAlertQuery.toLowerCase() || (Array.isArray(item.aliases) && item.aliases.some(alias => String(alias || '').trim().toLowerCase() === expectedAlertQuery.toLowerCase())))
     ? ['missing queryHealth for ' + expectedAlertQuery]
     : [];
+  for (const item of report.queryHealth || []) {
+    try {
+      assertQueryHealthRecommendationShape(item, `queryHealth ${item.query || 'unknown'}`);
+    } catch (error) {
+      queryHealthFailures.push(error.message);
+    }
+  }
   const strongDataPoorFailures = expectedTitles
     .filter(isStrongDataPoorTitle)
     .filter(title => {
@@ -484,6 +712,9 @@ function evaluate(filePath, report, telegramReport) {
       if (!record) return true;
       if (record.enrichmentStatus === 'fetched') {
         return !['inspect manually', 'apply'].includes(record.recommendedAction);
+      }
+      if (record.queryAlignmentStatus === 'mismatch') {
+        return false;
       }
       return record.dataPoor !== true || record.recommendedAction !== 'inspect manually';
     });
@@ -534,7 +765,9 @@ function evaluate(filePath, report, telegramReport) {
 async function main() {
   const workflow = readJson(workflowPath);
   validateWorkflowGraph(workflow);
+  await runParseNodeUnitChecks(workflow);
   await runMergeNodeUnitChecks(workflow);
+  await runQueryHistoryNodeUnitChecks(workflow);
   await runEmailDigestNodeUnitChecks(workflow);
   await runTelegramNodeUnitChecks(workflow);
   const parseCode = codeNode(workflow, 'Parse and Score Alerts');
