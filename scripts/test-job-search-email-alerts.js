@@ -118,6 +118,107 @@ function assertEmailDigestDelivery(workflow) {
   }
 }
 
+function assertProcessedEmailPostProcessing(workflow) {
+  const prepareNode = workflowNode(workflow, 'Prepare Processed Emails');
+  const ensureLabelNode = workflowNode(workflow, 'Ensure Processed Label');
+  const getLabelsNode = workflowNode(workflow, 'Get Processed Labels');
+  const resolveLabelNode = workflowNode(workflow, 'Resolve Processed Label Id');
+  const expandNode = workflowNode(workflow, 'Expand Processed Emails');
+  const addLabelNode = workflowNode(workflow, 'Add Processed Label');
+  const markReadNode = workflowNode(workflow, 'Mark Processed Email Read');
+  const resultNode = workflowNode(workflow, 'Processed Email Result');
+
+  if (prepareNode.type !== 'n8n-nodes-base.code') throw new Error('Prepare Processed Emails must be a Code node');
+  if (ensureLabelNode.type !== 'n8n-nodes-base.gmail' || ensureLabelNode.parameters?.resource !== 'label' || ensureLabelNode.parameters?.operation !== 'create') {
+    throw new Error('Ensure Processed Label must be a Gmail label create node');
+  }
+  if (ensureLabelNode.parameters?.name !== '={{ $json.processedLabelName }}') {
+    throw new Error('Ensure Processed Label must create the dynamic processed label name');
+  }
+  if (ensureLabelNode.continueOnFail !== true) {
+    throw new Error('Ensure Processed Label must continue on fail so repeated runs tolerate an existing label');
+  }
+  if (getLabelsNode.type !== 'n8n-nodes-base.gmail' || getLabelsNode.parameters?.resource !== 'label' || getLabelsNode.parameters?.operation !== 'getAll') {
+    throw new Error('Get Processed Labels must use Gmail label getAll');
+  }
+  if (getLabelsNode.parameters?.returnAll !== true) {
+    throw new Error('Get Processed Labels must fetch all labels so the processed label can be resolved by name');
+  }
+  if (resolveLabelNode.type !== 'n8n-nodes-base.code') throw new Error('Resolve Processed Label Id must be a Code node');
+  if (expandNode.type !== 'n8n-nodes-base.code') throw new Error('Expand Processed Emails must be a Code node');
+  if (addLabelNode.type !== 'n8n-nodes-base.gmail' || addLabelNode.parameters?.resource !== 'message' || addLabelNode.parameters?.operation !== 'addLabels') {
+    throw new Error('Add Processed Label must use Gmail message addLabels');
+  }
+  if (addLabelNode.parameters?.labelIds !== '={{ [$json.processedLabelId].filter(Boolean) }}') {
+    throw new Error('Add Processed Label must apply the resolved Gmail label id');
+  }
+  if (markReadNode.type !== 'n8n-nodes-base.gmail' || markReadNode.parameters?.resource !== 'message' || markReadNode.parameters?.operation !== 'markAsRead') {
+    throw new Error('Mark Processed Email Read must use Gmail message markAsRead');
+  }
+  if (resultNode.type !== 'n8n-nodes-base.code') throw new Error('Processed Email Result must be a Code node');
+
+  const emailTargets = workflow.connections?.['Email Delivery Result']?.main?.[0]?.map(edge => edge.node) || [];
+  const telegramTargets = workflow.connections?.['Telegram Delivery Result']?.main?.[0]?.map(edge => edge.node) || [];
+  const prepareTargets = workflow.connections?.['Prepare Processed Emails']?.main?.[0]?.map(edge => edge.node) || [];
+  const ensureTargets = workflow.connections?.['Ensure Processed Label']?.main?.[0]?.map(edge => edge.node) || [];
+  const getLabelsTargets = workflow.connections?.['Get Processed Labels']?.main?.[0]?.map(edge => edge.node) || [];
+  const resolveTargets = workflow.connections?.['Resolve Processed Label Id']?.main?.[0]?.map(edge => edge.node) || [];
+  const expandTargets = workflow.connections?.['Expand Processed Emails']?.main?.[0]?.map(edge => edge.node) || [];
+  const addLabelTargets = workflow.connections?.['Add Processed Label']?.main?.[0]?.map(edge => edge.node) || [];
+  const markReadTargets = workflow.connections?.['Mark Processed Email Read']?.main?.[0]?.map(edge => edge.node) || [];
+
+  if (!emailTargets.includes('Prepare Processed Emails')) throw new Error('Email Delivery Result must trigger Prepare Processed Emails');
+  if (!telegramTargets.includes('Prepare Processed Emails')) throw new Error('Telegram Delivery Result must trigger Prepare Processed Emails');
+  if (!prepareTargets.includes('Ensure Processed Label')) throw new Error('Prepare Processed Emails must feed Ensure Processed Label');
+  if (!ensureTargets.includes('Get Processed Labels')) throw new Error('Ensure Processed Label must feed Get Processed Labels');
+  if (!getLabelsTargets.includes('Resolve Processed Label Id')) throw new Error('Get Processed Labels must feed Resolve Processed Label Id');
+  if (!resolveTargets.includes('Expand Processed Emails')) throw new Error('Resolve Processed Label Id must feed Expand Processed Emails');
+  if (!expandTargets.includes('Add Processed Label')) throw new Error('Expand Processed Emails must feed Add Processed Label');
+  if (!addLabelTargets.includes('Mark Processed Email Read')) throw new Error('Add Processed Label must feed Mark Processed Email Read');
+  if (!markReadTargets.includes('Processed Email Result')) throw new Error('Mark Processed Email Read must feed Processed Email Result');
+}
+
+async function runPrepareProcessedEmailsUnitChecks(workflow) {
+  const code = codeNode(workflow, 'Prepare Processed Emails');
+  const result = await runCode(code, [{ json: {
+    deliveryStatus: 'sent_email',
+    records: [
+      { emailId: 'abc#1' },
+      { emailId: 'abc#2' },
+      { emailId: 'def#1' },
+      { emailId: '' }
+    ]
+  } }]);
+
+  if (result.processedLabelName !== 'job-alert/processed') throw new Error('Prepare Processed Emails must set the processed label name');
+  if (JSON.stringify(result.processedMessageIds) !== JSON.stringify(['abc', 'def'])) {
+    throw new Error('Prepare Processed Emails must deduplicate Gmail message IDs from record emailId values');
+  }
+  if (result.processedMessageCount !== 2) throw new Error('Prepare Processed Emails must expose the processed message count');
+}
+
+async function runResolveProcessedLabelIdUnitChecks(workflow) {
+  const code = codeNode(workflow, 'Resolve Processed Label Id');
+  const result = await runCode(code, [
+    { json: { id: 'Label_1', name: 'job-alert/processed' } },
+    { json: { id: 'Label_2', name: 'Other' } },
+  ], {
+    'Prepare Processed Emails': [{
+      json: {
+        processedLabelName: 'job-alert/processed',
+        processedMessageIds: ['abc'],
+      }
+    }],
+  });
+
+  if (result.processedLabelId !== 'Label_1') {
+    throw new Error('Resolve Processed Label Id must find the Gmail label id by label name');
+  }
+  if (result.processedLabelLookupError) {
+    throw new Error('Resolve Processed Label Id must not emit a lookup error when the label exists');
+  }
+}
+
 function assertGmailBacklogScan(workflow) {
   const schedule = workflowNode(workflow, 'Schedule Trigger');
   if (schedule.type !== 'n8n-nodes-base.scheduleTrigger') {
@@ -162,6 +263,7 @@ function validateWorkflowGraph(workflow) {
   assertTelegramNodeUsesHtmlParseMode(workflow);
   assertEmailDigestDelivery(workflow);
   assertGmailBacklogScan(workflow);
+  assertProcessedEmailPostProcessing(workflow);
 }
 
 function fixtureFiles(dir) {
@@ -767,6 +869,8 @@ async function main() {
   validateWorkflowGraph(workflow);
   await runParseNodeUnitChecks(workflow);
   await runMergeNodeUnitChecks(workflow);
+  await runPrepareProcessedEmailsUnitChecks(workflow);
+  await runResolveProcessedLabelIdUnitChecks(workflow);
   await runQueryHistoryNodeUnitChecks(workflow);
   await runEmailDigestNodeUnitChecks(workflow);
   await runTelegramNodeUnitChecks(workflow);

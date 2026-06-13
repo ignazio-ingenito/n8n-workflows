@@ -740,6 +740,124 @@
         680,
         0
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const report = $input.first().json;\nconst processedLabelName = 'job-alert/processed';\nconst records = Array.isArray(report.records) ? report.records : [];\nconst processedMessageIds = [...new Set(records\n  .map(record => String(record.emailId || '').split('#')[0].trim())\n  .filter(Boolean))];\n\nreturn [{\n  json: {\n    ...report,\n    processedLabelName,\n    processedMessageIds,\n    processedMessageCount: processedMessageIds.length\n  }\n}];"
+      },
+      "id": "prepare-processed-emails-job-search-email-alerts",
+      "name": "Prepare Processed Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "create",
+        "name": "={{ $json.processedLabelName }}",
+        "options": {}
+      },
+      "id": "ensure-processed-label-job-search-email-alerts",
+      "name": "Ensure Processed Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2980,
+        140
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "get-processed-labels-job-search-email-alerts",
+      "name": "Get Processed Labels",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3240,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Prepare Processed Emails').first().json;\nconst targetName = String(prepared.processedLabelName || 'job-alert/processed').trim();\nconst labels = $input.all().map(item => item.json || {});\nconst matchedLabel = labels.find(label => String(label.name || '').trim().toLowerCase() === targetName.toLowerCase());\n\nreturn [{\n  json: {\n    ...prepared,\n    processedLabelName: targetName,\n    processedLabelId: matchedLabel?.id || '',\n    processedLabelLookupError: matchedLabel?.id ? '' : `Processed Gmail label not found: ${targetName}`\n  }\n}];"
+      },
+      "id": "resolve-processed-label-id-job-search-email-alerts",
+      "name": "Resolve Processed Label Id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3500,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Resolve Processed Label Id').first().json;\nconst messageIds = Array.isArray(prepared.processedMessageIds) ? prepared.processedMessageIds : [];\n\nreturn messageIds.map((messageId, index) => ({\n  json: {\n    ...prepared,\n    messageId,\n    processedLabelName: prepared.processedLabelName || 'job-alert/processed',\n    processedLabelId: prepared.processedLabelId || ''\n  },\n  pairedItem: { item: index }\n}));"
+      },
+      "id": "expand-processed-emails-job-search-email-alerts",
+      "name": "Expand Processed Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $json.messageId }}",
+        "labelIds": "={{ [$json.processedLabelId].filter(Boolean) }}"
+      },
+      "id": "add-processed-label-job-search-email-alerts",
+      "name": "Add Processed Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4020,
+        140
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "={{ $json.messageId }}"
+      },
+      "id": "mark-processed-email-read-job-search-email-alerts",
+      "name": "Mark Processed Email Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4280,
+        140
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $('Resolve Processed Label Id').first().json;\nconst labelItems = $('Add Processed Label').all();\nconst readItems = $input.all();\nconst labelSuccesses = labelItems.filter(item => !item.json?.error);\nconst readSuccesses = readItems.filter(item => !item.json?.error);\nconst failures = [];\n\nif (prepared.processedLabelLookupError) failures.push(prepared.processedLabelLookupError);\nfor (const item of labelItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\nfor (const item of readItems) {\n  if (item.json?.error) failures.push(item.json.error);\n}\n\nreturn [{\n  json: {\n    ...prepared,\n    processedLabelAppliedCount: labelSuccesses.length,\n    processedReadCount: readSuccesses.length,\n    processedFailures: failures.filter(Boolean)\n  }\n}];"
+      },
+      "id": "processed-email-result-job-search-email-alerts",
+      "name": "Processed Email Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4540,
+        140
+      ]
     }
   ],
   "connections": {
@@ -941,6 +1059,105 @@
         [
           {
             "node": "Delivery Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Delivery Result": {
+      "main": [
+        [
+          {
+            "node": "Prepare Processed Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Delivery Result": {
+      "main": [
+        [
+          {
+            "node": "Prepare Processed Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Processed Emails": {
+      "main": [
+        [
+          {
+            "node": "Ensure Processed Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Processed Label": {
+      "main": [
+        [
+          {
+            "node": "Get Processed Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Processed Labels": {
+      "main": [
+        [
+          {
+            "node": "Resolve Processed Label Id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Processed Label Id": {
+      "main": [
+        [
+          {
+            "node": "Expand Processed Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Processed Emails": {
+      "main": [
+        [
+          {
+            "node": "Add Processed Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Processed Label": {
+      "main": [
+        [
+          {
+            "node": "Mark Processed Email Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Processed Email Read": {
+      "main": [
+        [
+          {
+            "node": "Processed Email Result",
             "type": "main",
             "index": 0
           }
