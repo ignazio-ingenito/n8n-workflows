@@ -133,7 +133,12 @@ Per usare il digest email sugli alert email, configura `digestEmailTo` nel nodo
 al nodo `Send Digest Email`. Per usare Telegram, configura `telegramChatId` e
 associa la credenziale Telegram al nodo `Send Report to Telegram`. Il workflow
 email usa le stesse esclusioni operative del radar pubblico per Product Engineer
-standalone e modelli non permanent.
+standalone e modelli non permanent. Esclude anche i ruoli UK/Regno Unito senza
+indicazione esplicita di visa sponsorship o supporto visto, usando
+`uk_requires_sponsorship` prima dello scoring. Le email LinkedIn di recommended
+jobs sono accettate nello stesso flusso, ma i suggerimenti senza titolo target o
+famiglia ruolo target riconoscibile sono esclusi con `low_signal_public_feed` e
+non alimentano `queryHealth`, che resta riservato agli alert salvati.
 
 Source of truth strategica:
 

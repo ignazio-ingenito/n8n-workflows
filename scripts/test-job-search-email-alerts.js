@@ -469,6 +469,112 @@ async function runParseNodeUnitChecks(workflow) {
   if (record.dataPoor !== false) {
     throw new Error('Parse and Score Alerts must disable the dataPoor manual-review override for query mismatches');
   }
+
+  const ukNoSponsorshipFixture = {
+    id: 'unit-uk-no-sponsorship',
+    subject: 'Chief Technology Officer',
+    from: 'jobalerts-noreply@linkedin.com',
+    date: '2026-06-22T00:00:00.000Z',
+    textPlain: [
+      'Il tuo avviso di offerte di lavoro e stato creato: Chief Technology Officer (Regno Unito).',
+      '',
+      'Chief Technology Officer',
+      'HM Treasury',
+      'Grande Londra (Ibrido)',
+      '',
+      'Corrispondenza competenze alta',
+      'Visualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4419261231'
+    ].join('\n'),
+    text: '',
+    textHtml: '',
+    html: ''
+  };
+  const ukNoSponsorshipReport = await runParseNode(parseCode, ukNoSponsorshipFixture);
+  const ukNoSponsorshipRecord = ukNoSponsorshipReport.records?.find(item => item.url === 'https://www.linkedin.com/comm/jobs/view/4419261231');
+  if (!ukNoSponsorshipRecord) {
+    throw new Error('Parse and Score Alerts must extract the UK no-sponsorship unit record');
+  }
+  if (ukNoSponsorshipRecord.exclusionReason !== 'uk_requires_sponsorship' || ukNoSponsorshipRecord.outOfScope !== true) {
+    throw new Error('UK records without explicit visa sponsorship must be excluded before scoring');
+  }
+  if (ukNoSponsorshipRecord.recommendedAction !== 'ignore' || ukNoSponsorshipRecord.applicationPriorityScore !== 0) {
+    throw new Error('UK records without explicit visa sponsorship must not enter actionable queues');
+  }
+
+  const ukWithSponsorshipFixture = {
+    id: 'unit-uk-with-sponsorship',
+    subject: 'Platform Engineering Lead',
+    from: 'jobalerts-noreply@linkedin.com',
+    date: '2026-06-22T00:00:00.000Z',
+    textPlain: [
+      'Il tuo avviso di offerte di lavoro e stato creato: Platform Engineering Lead (Regno Unito).',
+      '',
+      'Head of Cloud Platforms',
+      'Example Cloud',
+      'Londra, Regno Unito (Ibrido)',
+      '',
+      'Visa sponsorship available for this role',
+      'Visualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4416662251'
+    ].join('\n'),
+    text: '',
+    textHtml: '',
+    html: ''
+  };
+  const ukWithSponsorshipReport = await runParseNode(parseCode, ukWithSponsorshipFixture);
+  const ukWithSponsorshipRecord = ukWithSponsorshipReport.records?.find(item => item.url === 'https://www.linkedin.com/comm/jobs/view/4416662251');
+  if (!ukWithSponsorshipRecord) {
+    throw new Error('Parse and Score Alerts must extract the UK sponsorship unit record');
+  }
+  if (ukWithSponsorshipRecord.exclusionReason === 'uk_requires_sponsorship') {
+    throw new Error('UK records with explicit visa sponsorship must not be excluded by the UK eligibility gate');
+  }
+
+  const linkedInRecommendedFixture = {
+    id: 'unit-linkedin-recommended-jobs',
+    subject: 'Potresti avere un profilo adeguato per il ruolo Engineering Manager presso Subito',
+    from: 'jobs-listings@linkedin.com',
+    date: '2026-06-22T00:00:00.000Z',
+    textPlain: [
+      'Potresti avere un profilo adeguato per il ruolo Engineering Manager presso Subito',
+      '',
+      'Engineering Manager',
+      'Subito',
+      'Milano (Ibrido)',
+      '',
+      'Selezione attiva',
+      'Visualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4421934755',
+      '',
+      '------------------------------',
+      '',
+      'Wholesale Marketing Manager',
+      'Venchi',
+      'Milano',
+      '',
+      'Selezione attiva',
+      'Visualizza offerta di lavoro: https://www.linkedin.com/comm/jobs/view/4420000001'
+    ].join('\n'),
+    text: '',
+    textHtml: '',
+    html: ''
+  };
+  const linkedInRecommendedReport = await runParseNode(parseCode, linkedInRecommendedFixture);
+  const recommendedEngineeringRecord = linkedInRecommendedReport.records?.find(item => item.url === 'https://www.linkedin.com/comm/jobs/view/4421934755');
+  const recommendedMarketingRecord = linkedInRecommendedReport.records?.find(item => item.url === 'https://www.linkedin.com/comm/jobs/view/4420000001');
+  if (!recommendedEngineeringRecord || !recommendedMarketingRecord) {
+    throw new Error('Parse and Score Alerts must extract both LinkedIn recommended jobs unit records');
+  }
+  if (recommendedEngineeringRecord.source !== 'LinkedIn recommended jobs email') {
+    throw new Error(`Expected LinkedIn recommended source classification, got "${recommendedEngineeringRecord.source}"`);
+  }
+  if (recommendedEngineeringRecord.exclusionReason === 'low_signal_public_feed' || recommendedEngineeringRecord.outOfScope === true) {
+    throw new Error('Target-title LinkedIn recommended jobs must remain eligible for scoring');
+  }
+  if (recommendedMarketingRecord.exclusionReason !== 'low_signal_public_feed' || recommendedMarketingRecord.outOfScope !== true) {
+    throw new Error('Low-signal LinkedIn recommended jobs must be excluded before digest classification');
+  }
+  if ((linkedInRecommendedReport.queryHealth || []).some(item => String(item.query || '').includes('LinkedIn recommended jobs'))) {
+    throw new Error('LinkedIn recommended jobs must not feed saved-alert query health');
+  }
 }
 
 async function runQueryHistoryNodeUnitChecks(workflow) {
