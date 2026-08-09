@@ -171,6 +171,7 @@ Parti da qui:
 ```text
 docs/2026-05-29-n8n-workflows-gitops-handoff.md
 ```
+
 ## Harbor scan alerts
 
 `workflows/harbor-scan-alerts.json` riceve CloudEvents Harbor sul path
@@ -193,3 +194,36 @@ Il JSON versiona i credential stub e il channel ID reali esportati dal workflow
 live, ma non contiene i valori delle credenziali. Non sostituirli con ID
 inventati. Dopo ogni modifica ai binding, esporta nuovamente il workflow live e
 versiona gli ID reali prima di considerare conclusa la migrazione.
+
+## UptimeRobot email alerts
+
+`workflows/uptimerobot-email-alerts.json` usa solo nodi standard n8n:
+`Email Trigger (IMAP)` → filtro UptimeRobot → normalizzazione → filtro eventi →
+Slack `#uptime`.
+
+Il workflow:
+
+- ignora le email che non contengono un riferimento a UptimeRobot;
+- riconosce `Monitor is DOWN` come DOWN e `Monitor is UP` come recovery;
+- inoltra anche notifiche di scadenza SSL/domain quando il contenuto è
+  riconoscibile;
+- ignora messaggi UptimeRobot con tipo non riconosciuto invece di produrre
+  rumore su Slack;
+- viene importato inattivo.
+
+Prima della pubblicazione associa in n8n una credenziale IMAP reale al nodo
+`Receive UptimeRobot Email`. Username, password, host e token non devono essere
+versionati né copiati in chat. Il nodo `Notify uptime` riusa il credential stub
+`Slack Homelab Alerts` e punta al channel ID reale `C0BNZQD0EBU`; il valore del
+token Slack non è presente nell'export.
+
+Test sintetici minimi prima dell'E2E reale:
+
+- subject `Monitor is DOWN: example` → DOWN → Slack;
+- subject `Monitor is UP: example` → RECOVERY → Slack;
+- email non UptimeRobot → nessun messaggio Slack;
+- email UptimeRobot non riconosciuta → nessun messaggio Slack;
+- sample SSL/domain expiry riconoscibile → relativo evento Slack.
+
+La DoD richiede comunque due eventi reali UptimeRobot, DOWN e recovery, ricevuti
+dalla casella configurata e osservati in `#uptime`.
