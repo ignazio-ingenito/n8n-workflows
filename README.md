@@ -182,12 +182,14 @@ con `notified: false` e non attraversano il nodo Slack.
 Il workflow viene importato inattivo. Prima dell'attivazione associa:
 
 - al nodo `Receive Harbor Scan`, una credenziale HTTP Header Auth con nome
-  `Authorization` e valore `Bearer <token>`, uguale al valore SOPS usato dal
-  reconciler Harbor nel repository `homelab`;
+  `Authorization` e valore `Bearer <token>`, costruito a partire dallo stesso
+  token puro conservato con SOPS e usato dal reconciler Harbor nel repository
+  `homelab`;
 - al nodo `Notify harbor-security`, una credenziale Slack Access Token con
   permesso `chat:write` e accesso al canale `#harbor-security`, selezionando in
   UI il channel ID reale del canale.
 
-Non aggiungere credential o channel ID inventati al JSON. Dopo il binding,
-esporta il workflow live e versiona gli ID reali prima di considerare conclusa
-la migrazione.
+Il JSON versiona i credential stub e il channel ID reali esportati dal workflow
+live, ma non contiene i valori delle credenziali. Non sostituirli con ID
+inventati. Dopo ogni modifica ai binding, esporta nuovamente il workflow live e
+versiona gli ID reali prima di considerare conclusa la migrazione.

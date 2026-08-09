@@ -24,7 +24,7 @@
           "name": "Harbor Webhook Authorization"
         }
       },
-      "notes": "Before activation, bind an HTTP Header Auth credential with header name Authorization and the same Bearer value stored in the homelab SOPS Secret harbor-n8n-webhook-auth."
+      "notes": "The exported credential stub points to the live HTTP Header Auth credential. Its header name is Authorization and its value is Bearer <token>, built from the same pure token stored in the homelab SOPS Secret harbor-n8n-webhook-auth; the credential value is not included in this export."
     },
     {
       "parameters": {
@@ -172,7 +172,7 @@
           "name": "Slack Homelab Alerts"
         }
       },
-      "notes": "Before activation, bind the Slack access-token credential that can post to #harbor-security and select the channel's real ID in the n8n UI. No credential or channel ID is committed by this patch."
+      "notes": "The exported credential stub and channel ID point to the live Slack binding for #harbor-security. The Slack access-token credential value is not included in this export."
     },
     {
       "parameters": {
