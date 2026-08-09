@@ -171,3 +171,23 @@ Parti da qui:
 ```text
 docs/2026-05-29-n8n-workflows-gitops-handoff.md
 ```
+## Harbor scan alerts
+
+`workflows/harbor-scan-alerts.json` riceve CloudEvents Harbor sul path
+`/webhook/harbor-scans` e inoltra a `#harbor-security` soltanto
+`harbor.scan.failed` e `harbor.scan.completed` con conteggio `HIGH` o
+`CRITICAL` maggiore di zero. Le scansioni senza `HIGH`/`CRITICAL` rispondono
+con `notified: false` e non attraversano il nodo Slack.
+
+Il workflow viene importato inattivo. Prima dell'attivazione associa:
+
+- al nodo `Receive Harbor Scan`, una credenziale HTTP Header Auth con nome
+  `Authorization` e valore `Bearer <token>`, uguale al valore SOPS usato dal
+  reconciler Harbor nel repository `homelab`;
+- al nodo `Notify harbor-security`, una credenziale Slack Access Token con
+  permesso `chat:write` e accesso al canale `#harbor-security`, selezionando in
+  UI il channel ID reale del canale.
+
+Non aggiungere credential o channel ID inventati al JSON. Dopo il binding,
+esporta il workflow live e versiona gli ID reali prima di considerare conclusa
+la migrazione.
