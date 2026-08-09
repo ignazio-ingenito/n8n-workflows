@@ -1,0 +1,227 @@
+{
+  "name": "Uptime Robot Gmail Alerts to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "q": "uptimerobot",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "27c973a7-50f4-424a-b4eb-0f7d470d0f69",
+      "name": "Receive UptimeRobot Gmail",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -720,
+        160
+      ],
+      "notes": "Bind a Google Gmail OAuth2 credential in the n8n UI. The trigger watches unread messages matching the Gmail search 'uptimerobot'. No OAuth token or account data is stored in Git."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "uptime-event-type",
+              "name": "eventType",
+              "value": "={{ (() => { const subject = String($json.Subject ?? $json.subject ?? '').toLowerCase(); const snippet = String($json.snippet ?? '').toLowerCase(); const text = `${subject}\\n${snippet}`; if (subject.includes('monitor is down')) return 'DOWN'; if (subject.includes('monitor is up')) return 'RECOVERY'; if (text.includes('ssl') && /(expir|certificate)/i.test(text)) return 'SSL_EXPIRY'; if (text.includes('domain') && /expir/i.test(text)) return 'DOMAIN_EXPIRY'; return 'UNKNOWN'; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-monitor",
+              "name": "monitor",
+              "value": "={{ (() => {\n  const subject = String($json.Subject ?? $json.subject ?? '').trim();\n  const match = subject.match(/Monitor is (?:DOWN|UP):\\s*(.+)$/i);\n\n  if (match?.[1]) return match[1].trim();\n\n  const cleaned = subject.replace(/^\\[[^\\]]+\\]\\s*/, '').trim();\n  return cleaned || 'UptimeRobot monitor';\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-subject",
+              "name": "subject",
+              "value": "={{ String($json.Subject ?? $json.subject ?? '') }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-from",
+              "name": "from",
+              "value": "={{ String($json.From ?? $json.from ?? '') }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-details",
+              "name": "details",
+              "value": "={{ String($json.snippet ?? '').replace(/\\s+/g, ' ').trim().slice(0, 1200) }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-message-id",
+              "name": "messageId",
+              "value": "={{ String($json.id ?? '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f5135250-f09a-4ed1-a9bb-a3f170e234fb",
+      "name": "Normalize UptimeRobot Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -400,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "uptime-known-event",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "UNKNOWN",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2ae1aa97-256b-45d8-a3a5-87dcc6dcbbcb",
+      "name": "Known Uptime Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BNZQD0EBU",
+          "mode": "id"
+        },
+        "text": "={{ [\n  $json.eventType === 'DOWN' ? ':red_circle: *UptimeRobot DOWN*' :\n  $json.eventType === 'RECOVERY' ? ':large_green_circle: *UptimeRobot recovery*' :\n  $json.eventType === 'SSL_EXPIRY' ? ':warning: *UptimeRobot SSL expiry*' :\n  ':warning: *UptimeRobot domain expiry*',\n  '*Monitor:* `' + ($json.monitor || 'unknown') + '`',\n  $json.subject ? '*Subject:* ' + $json.subject : '',\n  $json.details ? '*Details:* ' + $json.details : ''\n].filter(Boolean).join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "e30fa924-9990-4330-b6db-9cf02f06e834",
+      "name": "Notify uptime",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        160,
+        64
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "8oGPRjhwfgjEJwxH",
+          "name": "Slack Homelab Alerts"
+        }
+      },
+      "notes": "Uses the existing Slack Homelab Alerts credential and sends to #uptime (C0BNZQD0EBU)."
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Normalize UptimeRobot Alert').item.json.messageId }}",
+        "labelIds": [
+          "UNREAD",
+          "INBOX"
+        ]
+      },
+      "id": "eb5a9f9e-3ddb-4b97-bf5e-1a01ea452fa0",
+      "name": "Mark Read and Archive Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        64
+      ],
+      "notes": "Bind the same Gmail OAuth2 credential used by the trigger. Runs only after Slack succeeds; removes UNREAD and INBOX so the alert is marked read and archived. If Slack fails, this node is not reached."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive UptimeRobot Gmail": {
+      "main": [
+        [
+          {
+            "node": "Normalize UptimeRobot Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize UptimeRobot Alert": {
+      "main": [
+        [
+          {
+            "node": "Known Uptime Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Known Uptime Event?": {
+      "main": [
+        [
+          {
+            "node": "Notify uptime",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Notify uptime": {
+      "main": [
+        [
+          {
+            "node": "Mark Read and Archive Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0bb76e89-0d52-47d1-b6f4-f318a63806ca",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "uptimerobotGmailAlerts",
+  "tags": []
+}
