@@ -143,6 +143,25 @@
         }
       },
       "notes": "Uses the existing Slack Homelab Alerts credential and sends to #uptime (C0BNZQD0EBU)."
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Normalize UptimeRobot Alert').item.json.messageId }}",
+        "labelIds": [
+          "UNREAD",
+          "INBOX"
+        ]
+      },
+      "id": "eb5a9f9e-3ddb-4b97-bf5e-1a01ea452fa0",
+      "name": "Mark Read and Archive Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        64
+      ],
+      "notes": "Bind the same Gmail OAuth2 credential used by the trigger. Runs only after Slack succeeds; removes UNREAD and INBOX so the alert is marked read and archived. If Slack fails, this node is not reached."
     }
   ],
   "pinData": {},
@@ -179,6 +198,17 @@
           }
         ],
         []
+      ]
+    },
+    "Notify uptime": {
+      "main": [
+        [
+          {
+            "node": "Mark Read and Archive Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
