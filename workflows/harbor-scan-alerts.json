@@ -1,0 +1,276 @@
+{
+  "name": "Harbor Scan Alerts to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "harbor-scans",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "eb1eee1d-f862-47da-82b3-bba79484dd9e",
+      "name": "Receive Harbor Scan",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -784,
+        96
+      ],
+      "webhookId": "b4822425-ea32-48c0-a571-101e1f3d6603",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "7WKfWBHwb4nmPvgG",
+          "name": "Harbor Webhook Authorization"
+        }
+      },
+      "notes": "The exported credential stub points to the live HTTP Header Auth credential. Its header name is Authorization and its value is Bearer <token>, built from the same pure token stored in the homelab SOPS Secret harbor-n8n-webhook-auth; the credential value is not included in this export."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "harbor-event-type",
+              "name": "eventType",
+              "value": "={{ $json.body.type }}",
+              "type": "string"
+            },
+            {
+              "id": "harbor-repository",
+              "name": "repository",
+              "value": "={{ $json.body.data.repository.repo_full_name ?? [$json.body.data.repository.namespace, $json.body.data.repository.name].filter(Boolean).join('/') }}",
+              "type": "string"
+            },
+            {
+              "id": "harbor-artifact-reference",
+              "name": "artifactReference",
+              "value": "={{ $json.body.data.resources[0].tag || $json.body.data.resources[0].digest }}",
+              "type": "string"
+            },
+            {
+              "id": "harbor-digest",
+              "name": "digest",
+              "value": "={{ $json.body.data.resources[0].digest }}",
+              "type": "string"
+            },
+            {
+              "id": "harbor-critical-count",
+              "name": "criticalCount",
+              "value": "={{ (() => { const overview = Object.values($json.body.data.resources[0].scan_overview ?? {})[0] ?? {}; const counts = overview.summary?.summary ?? {}; return Number(counts.Critical ?? counts.CRITICAL ?? counts.critical ?? 0); })() }}",
+              "type": "number"
+            },
+            {
+              "id": "harbor-high-count",
+              "name": "highCount",
+              "value": "={{ (() => { const overview = Object.values($json.body.data.resources[0].scan_overview ?? {})[0] ?? {}; const counts = overview.summary?.summary ?? {}; return Number(counts.High ?? counts.HIGH ?? counts.high ?? 0); })() }}",
+              "type": "number"
+            },
+            {
+              "id": "harbor-scan-status",
+              "name": "scanStatus",
+              "value": "={{ (() => { const overview = Object.values($json.body.data.resources[0].scan_overview ?? {})[0] ?? {}; return overview.scan_status || ($json.body.type === 'harbor.scan.failed' ? 'Error' : 'Unknown'); })() }}",
+              "type": "string"
+            },
+            {
+              "id": "harbor-artifact-url",
+              "name": "harborUrl",
+              "value": "={{ (() => { const projectId = $json.body.source?.match(/^\\/projects\\/(\\d+)\\//)?.[1]; const repository = $json.body.data.repository.name; const digest = $json.body.data.resources[0].digest; return projectId && repository && digest ? `https://harbor.skunklabs.uk/harbor/projects/${projectId}/repositories/${encodeURIComponent(repository)}/artifacts-tab/artifacts/${encodeURIComponent(digest)}` : 'https://harbor.skunklabs.uk/harbor/projects'; })() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d140eb99-971f-4177-9ab2-2be07f57b441",
+      "name": "Normalize Harbor Scan",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -528,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "harbor-scan-failed",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "harbor.scan.failed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "harbor-has-critical",
+              "leftValue": "={{ $json.criticalCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "harbor-has-high",
+              "leftValue": "={{ $json.highCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "cf7c500d-63c1-4b05-ba0b-5de527558495",
+      "name": "Failed or High Severity?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -272,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BP1NUJ9QR",
+          "mode": "id"
+        },
+        "text": "={{ [\n  $json.eventType === 'harbor.scan.failed'\n    ? ':x: *Harbor scan failed*'\n    : ':warning: *Harbor vulnerabilities detected*',\n  '*Repository/artifact:* `' + $json.repository + '`',\n  '*Tag or digest:* `' + $json.artifactReference + '`',\n  '*HIGH:* ' + $json.highCount + '  *CRITICAL:* ' + $json.criticalCount,\n  '*Scan status:* `' + $json.scanStatus + '`',\n  '*Harbor:* ' + $json.harborUrl\n].join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "aadb575e-dd28-48c4-86b3-6017fe94bff9",
+      "name": "Notify harbor-security",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "cf8e6ec1-b11c-405d-8f87-05f61e693e73",
+      "credentials": {
+        "slackApi": {
+          "id": "8oGPRjhwfgjEJwxH",
+          "name": "Slack Homelab Alerts"
+        }
+      },
+      "notes": "The exported credential stub and channel ID point to the live Slack binding for #harbor-security. The Slack access-token credential value is not included in this export."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ accepted: true, notified: true, event_type: $('Normalize Harbor Scan').first().json.eventType, repository: $('Normalize Harbor Scan').first().json.repository, reference: $('Normalize Harbor Scan').first().json.artifactReference }) }}",
+        "options": {}
+      },
+      "id": "69b1b987-8715-4e9e-a70e-67bd94020a6c",
+      "name": "Acknowledge Notification",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ accepted: true, notified: false, reason: 'no_high_or_critical_vulnerabilities', event_type: $('Normalize Harbor Scan').first().json.eventType, repository: $('Normalize Harbor Scan').first().json.repository, reference: $('Normalize Harbor Scan').first().json.artifactReference }) }}",
+        "options": {}
+      },
+      "id": "c9a9b61a-2db3-4e49-b087-f475f2cf4609",
+      "name": "Acknowledge Clean Scan",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        208
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Harbor Scan": {
+      "main": [
+        [
+          {
+            "node": "Normalize Harbor Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Harbor Scan": {
+      "main": [
+        [
+          {
+            "node": "Failed or High Severity?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Failed or High Severity?": {
+      "main": [
+        [
+          {
+            "node": "Notify harbor-security",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge Clean Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify harbor-security": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a47ca43b-03cc-4d2d-a229-0f16d9e12a38",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a026932811e80157ae3a8e15f6c6b45d2baf8c141b2c3a0ed634a74e1e33ea70"
+  },
+  "nodeGroups": [],
+  "id": "v6wvQVW7RYiXIde9",
+  "tags": []
+}
