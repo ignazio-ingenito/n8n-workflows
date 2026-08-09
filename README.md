@@ -198,32 +198,35 @@ versiona gli ID reali prima di considerare conclusa la migrazione.
 ## UptimeRobot email alerts
 
 `workflows/uptimerobot-email-alerts.json` usa solo nodi standard n8n:
-`Email Trigger (IMAP)` → filtro UptimeRobot → normalizzazione → filtro eventi →
-Slack `#uptime`.
+`Gmail Trigger` → normalizzazione → filtro eventi conosciuti → Slack `#uptime` →
+cleanup Gmail.
 
 Il workflow:
 
-- ignora le email che non contengono un riferimento a UptimeRobot;
+- osserva le email non lette che corrispondono alla ricerca Gmail `uptimerobot`;
 - riconosce `Monitor is DOWN` come DOWN e `Monitor is UP` come recovery;
 - inoltra anche notifiche di scadenza SSL/domain quando il contenuto è
   riconoscibile;
 - ignora messaggi UptimeRobot con tipo non riconosciuto invece di produrre
   rumore su Slack;
-- viene importato inattivo.
+- dopo una consegna Slack riuscita rimuove le label Gmail `UNREAD` e `INBOX`,
+  marcando il messaggio come letto e archiviandolo;
+- se Slack fallisce, il cleanup Gmail non viene eseguito e il messaggio sorgente
+  resta disponibile per troubleshooting/retry;
+- viene versionato con `active: false`; la prima attivazione resta una decisione
+  runtime in n8n.
 
-Prima della pubblicazione associa in n8n una credenziale IMAP reale al nodo
-`Receive UptimeRobot Email`. Username, password, host e token non devono essere
-versionati né copiati in chat. Il nodo `Notify uptime` riusa il credential stub
-`Slack Homelab Alerts` e punta al channel ID reale `C0BNZQD0EBU`; il valore del
-token Slack non è presente nell'export.
+In n8n associa la stessa credenziale Google/Gmail OAuth2 sia al nodo
+`Receive UptimeRobot Gmail` sia al nodo `Mark Read and Archive Gmail`. Il nodo
+`Notify uptime` riusa il credential stub `Slack Homelab Alerts` e punta al
+channel ID reale `C0BNZQD0EBU`; nessun token OAuth o Slack è presente
+nell'export versionato.
 
-Test sintetici minimi prima dell'E2E reale:
+Evidenza E2E della Wave `homelab#659` (2026-08-09):
 
-- subject `Monitor is DOWN: example` → DOWN → Slack;
-- subject `Monitor is UP: example` → RECOVERY → Slack;
-- email non UptimeRobot → nessun messaggio Slack;
-- email UptimeRobot non riconosciuta → nessun messaggio Slack;
-- sample SSL/domain expiry riconoscibile → relativo evento Slack.
-
-La DoD richiede comunque due eventi reali UptimeRobot, DOWN e recovery, ricevuti
-dalla casella configurata e osservati in `#uptime`.
+- DOWN reale di `www.skunklabs.uk` → Gmail → n8n → `#uptime`;
+- recovery reale → stesso percorso → `#uptime`;
+- cleanup verificato sulla mail DOWN: label `INBOX` e `UNREAD` assenti dopo la
+  consegna Slack;
+- workflow mergiato in `n8n-workflows#3`; merge commit
+  `980891b7a9b7970000e373276761cc68ef100077`.
