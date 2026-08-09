@@ -1,0 +1,237 @@
+{
+  "name": "UptimeRobot Email Alerts to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "downloadAttachments": false,
+        "format": "simple",
+        "options": {
+          "trackLastMessageId": true
+        }
+      },
+      "id": "1d20c875-d61a-4304-85c7-bb088438adbe",
+      "name": "Receive UptimeRobot Email",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.2,
+      "position": [
+        -720,
+        160
+      ],
+      "notes": "Bind a real IMAP credential in the n8n UI. No email username, password, host, or token is stored in Git."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "uptimerobot-source",
+              "leftValue": "={{ [String($json.from ?? ''), String($json.subject ?? ''), String($json.textPlain ?? ''), String($json.textHtml ?? '')].join(' ').toLowerCase().includes('uptimerobot') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7a9977f9-5231-44db-818f-991910a5687a",
+      "name": "UptimeRobot Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -464,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "uptime-event-type",
+              "name": "eventType",
+              "value": "={{ (() => { const subject = String($json.subject ?? '').toLowerCase(); const body = String($json.textPlain ?? $json.textHtml ?? '').toLowerCase(); const text = `${subject}\\n${body}`; if (subject.includes('monitor is down')) return 'DOWN'; if (subject.includes('monitor is up')) return 'RECOVERY'; if (text.includes('ssl') && /(expir|certificate)/i.test(text)) return 'SSL_EXPIRY'; if (text.includes('domain') && /expir/i.test(text)) return 'DOMAIN_EXPIRY'; return 'UNKNOWN'; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-monitor",
+              "name": "monitor",
+              "value": "={{ (() => { const subject = String($json.subject ?? '').trim(); const match = subject.match(/Monitor is (?:DOWN|UP):\\s*(.+)$/i); return (match?.[1] ?? subject.replace(/^\\[[^\\]]+\\]\\s*/, '') ?? 'UptimeRobot monitor').trim(); })() }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-subject",
+              "name": "subject",
+              "value": "={{ String($json.subject ?? '') }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-from",
+              "name": "from",
+              "value": "={{ String($json.from ?? '') }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-body",
+              "name": "details",
+              "value": "={{ String($json.textPlain ?? $json.textHtml ?? '').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 1200) }}",
+              "type": "string"
+            },
+            {
+              "id": "uptime-date",
+              "name": "receivedAt",
+              "value": "={{ String($json.date ?? '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6697c93f-16cf-4645-abb4-ef2c2500aaea",
+      "name": "Normalize UptimeRobot Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -208,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "uptime-known-event",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "UNKNOWN",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "01b4eaa2-c186-4108-94f0-5c527b92c172",
+      "name": "Known Uptime Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BNZQD0EBU",
+          "mode": "id"
+        },
+        "text": "={{ [\n  $json.eventType === 'DOWN' ? ':red_circle: *UptimeRobot DOWN*' :\n  $json.eventType === 'RECOVERY' ? ':large_green_circle: *UptimeRobot recovery*' :\n  $json.eventType === 'SSL_EXPIRY' ? ':warning: *UptimeRobot SSL expiry*' :\n  ':warning: *UptimeRobot domain expiry*',\n  '*Monitor:* `' + ($json.monitor || 'unknown') + '`',\n  $json.subject ? '*Subject:* ' + $json.subject : '',\n  $json.details ? '*Details:* ' + $json.details : '',\n  $json.receivedAt ? '*Received:* ' + $json.receivedAt : ''\n].filter(Boolean).join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "22e901f6-9381-48b0-b73a-d3e70cb734e6",
+      "name": "Notify uptime",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        304,
+        -32
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "8oGPRjhwfgjEJwxH",
+          "name": "Slack Homelab Alerts"
+        }
+      },
+      "notes": "Uses the existing Slack Homelab Alerts credential stub and the real #uptime channel ID C0BNZQD0EBU. The Slack credential value is not included in this export."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive UptimeRobot Email": {
+      "main": [
+        [
+          {
+            "node": "UptimeRobot Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UptimeRobot Email?": {
+      "main": [
+        [
+          {
+            "node": "Normalize UptimeRobot Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Normalize UptimeRobot Alert": {
+      "main": [
+        [
+          {
+            "node": "Known Uptime Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Known Uptime Event?": {
+      "main": [
+        [
+          {
+            "node": "Notify uptime",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "45021e1e-c353-43b1-9b98-3d5414d6ee74",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "uptimerobotEmailAlerts",
+  "tags": []
+}
