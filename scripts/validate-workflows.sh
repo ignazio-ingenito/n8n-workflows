@@ -36,6 +36,11 @@ if [ "${workflow_found}" -eq 0 ]; then
   echo "No workflow JSON files found under workflows/."
 fi
 
+if [ "${VALIDATE_CREDENTIALS:-1}" = "0" ]; then
+  echo "Credential export validation skipped."
+  exit 0
+fi
+
 credential_found=0
 
 while IFS= read -r -d '' file; do

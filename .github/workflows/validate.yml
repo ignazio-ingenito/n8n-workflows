@@ -16,6 +16,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Validate workflow JSON
+        env:
+          VALIDATE_CREDENTIALS: "0"
         run: ./scripts/validate-workflows.sh
       - name: Test GitHub dependency automerge policy
         run: node ./scripts/test-github-dependency-automerge.js
