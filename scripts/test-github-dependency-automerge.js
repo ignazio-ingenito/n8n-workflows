@@ -85,4 +85,27 @@ assert.equal(evaluate([basePr({
   body: '| Package | Update | Change |\n|---|---|---|\n| example | major | `v1.2.0` → `v2.0.0` |',
 })]).length, 0);
 
+{
+  const sameRepo = {
+    nameWithOwner: 'ignazio-ingenito/example',
+    mergeCommitAllowed: true,
+    squashMergeAllowed: true,
+    rebaseMergeAllowed: true,
+  };
+  const otherRepo = {
+    nameWithOwner: 'ignazio-ingenito/other',
+    mergeCommitAllowed: true,
+    squashMergeAllowed: true,
+    rebaseMergeAllowed: true,
+  };
+  const result = evaluate([
+    basePr({ number: 11, title: 'chore(deps): update example to v1.3.0', repository: sameRepo }),
+    basePr({ number: 10, title: 'chore(deps): update vulnerable dependency to v2.0.0 [security]', repository: sameRepo }),
+    basePr({ number: 20, repository: otherRepo, headRefName: 'renovate/other-1.x' }),
+  ]);
+  assert.equal(result.length, 2, 'at most one PR per repository must be emitted');
+  assert.equal(result.filter((item) => item.json.repo === 'ignazio-ingenito/example').length, 1);
+  assert.equal(result.find((item) => item.json.repo === 'ignazio-ingenito/example').json.number, 10, 'security update should win within the same repository');
+}
+
 console.log('OK github dependency automerge policy');
