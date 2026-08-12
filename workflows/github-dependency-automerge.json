@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-12T19:20:00.000Z",
+  "updatedAt": "2026-08-12T20:14:00.000Z",
   "createdAt": "2026-08-12T19:20:00.000Z",
   "id": "github-dependency-automerge",
   "name": "GitHub Dependency PR Auto Merge",
@@ -8,16 +8,7 @@
   "isArchived": false,
   "nodes": [
     {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "minutesInterval": 15
-            }
-          ]
-        }
-      },
+      "parameters": {"rule": {"interval": [{"field": "minutes", "minutesInterval": 15}]}},
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [-720, 0],
@@ -32,27 +23,20 @@
         "nodeCredentialType": "githubApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"query\": \"query DependencyPrCandidates {\\n  search(query: \\\"user:ignazio-ingenito is:pr is:open\\\", type: ISSUE, first: 100) {\\n    nodes {\\n      ... on PullRequest {\\n        number\\n        title\\n        body\\n        isDraft\\n        mergeable\\n        mergeStateStatus\\n        headRefName\\n        headRefOid\\n        reviewDecision\\n        author { login }\\n        labels(first: 20) { nodes { name } }\\n        repository {\\n          nameWithOwner\\n          mergeCommitAllowed\\n          squashMergeAllowed\\n          rebaseMergeAllowed\\n        }\\n        commits(last: 1) {\\n          nodes {\\n            commit {\\n              statusCheckRollup { state }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\"}",
-        "options": {
-          "sendCredentialsOnCrossOriginRedirect": true
-        }
+        "jsonBody": "={\"query\": \"query DependencyPrCandidates {\\n  search(query: \\\"user:ignazio-ingenito is:pr is:open\\\", type: ISSUE, first: 100) {\\n    nodes {\\n      ... on PullRequest {\\n        number\\n        title\\n        body\\n        isDraft\\n        mergeable\\n        mergeStateStatus\\n        headRefName\\n        headRefOid\\n        reviewDecision\\n        author { login }\\n        labels(first: 20) { nodes { name } }\\n        repository { nameWithOwner mergeCommitAllowed squashMergeAllowed rebaseMergeAllowed }\\n        commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }\\n      }\\n    }\\n  }\\n}\"}",
+        "options": {"sendCredentialsOnCrossOriginRedirect": true}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [-448, 0],
       "id": "5a6dcae5-41b6-4e60-b949-a971f1b60c72",
       "name": "Find open dependency PRs",
-      "credentials": {
-        "githubApi": {
-          "id": "eASX8oZcknKPY1lX",
-          "name": "GitHub account"
-        }
-      }
+      "credentials": {"githubApi": {"id": "eZohW3VQVXynF9jL", "name": "GitHub account"}}
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const owner = 'ignazio-ingenito';\nconst allowedAuthors = new Set(['renovate[bot]', 'dependabot[bot]']);\n\nfunction parseSemver(value) {\n  const match = String(value || '').match(/v?(\\d+)\\.(\\d+)\\.(\\d+)/);\n  return match ? match.slice(1, 4).map(Number) : null;\n}\n\nfunction classify(pr) {\n  const title = String(pr.title || '');\n  const body = String(pr.body || '');\n  const labels = (pr.labels?.nodes || []).map((label) => String(label.name || '').toLowerCase());\n\n  if (labels.some((label) => label === 'security' || label === 'security-update')) return 'security';\n  if (/\\|\\s*digest\\s*\\|/i.test(body) || /\\bdigest\\b/i.test(title)) return 'digest';\n  const renovateType = body.match(/\\|\\s*(major|minor|patch)\\s*\\|/i);\n  if (renovateType) return renovateType[1].toLowerCase();\n\n  const dependabot = title.match(/\\bfrom\\s+([^\\s`]+)\\s+to\\s+([^\\s`]+)/i);\n  if (dependabot) {\n    const from = parseSemver(dependabot[1]);\n    const to = parseSemver(dependabot[2]);\n    if (from && to) {\n      if (to[0] !== from[0]) return 'major';\n      if (to[1] !== from[1]) return 'minor';\n      if (to[2] !== from[2]) return 'patch';\n    }\n  }\n\n  const versions = [...`${title}\\n${body}`.matchAll(/v?(\\d+)\\.(\\d+)\\.(\\d+)/g)].map((m) => m.slice(1, 4).map(Number));\n  if (versions.length >= 2) {\n    const from = versions[0];\n    const to = versions[1];\n    if (to[0] !== from[0]) return 'major';\n    if (to[1] !== from[1]) return 'minor';\n    if (to[2] !== from[2]) return 'patch';\n  }\n  return null;\n}\n\nconst payload = $input.all()[0]?.json || {};\nconst prs = payload.data?.search?.nodes || [];\n\nreturn prs.flatMap((pr) => {\n  const author = pr.author?.login || '';\n  const repo = pr.repository?.nameWithOwner || '';\n  const head = pr.headRefName || '';\n  const status = pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.state || null;\n\n  if (!repo.startsWith(`${owner}/`)) return [];\n  if (!allowedAuthors.has(author)) return [];\n  if (pr.isDraft) return [];\n  if (author === 'renovate[bot]' && !head.startsWith('renovate/')) return [];\n  if (author === 'dependabot[bot]' && !head.startsWith('dependabot/')) return [];\n  if (/configure renovate|renovate onboarding/i.test(`${pr.title || ''}\\n${pr.body || ''}`)) return [];\n  if (pr.mergeable !== 'MERGEABLE' || pr.mergeStateStatus !== 'CLEAN') return [];\n  if (status !== 'SUCCESS') return [];\n  if (pr.reviewDecision === 'CHANGES_REQUESTED' || pr.reviewDecision === 'REVIEW_REQUIRED') return [];\n\n  const updateType = classify(pr);\n  if (!updateType || updateType === 'major') return [];\n\n  const mergeMethod = pr.repository?.squashMergeAllowed\n    ? 'squash'\n    : pr.repository?.mergeCommitAllowed\n      ? 'merge'\n      : pr.repository?.rebaseMergeAllowed\n        ? 'rebase'\n        : null;\n  if (!mergeMethod) return [];\n\n  const [repoOwner, repoName] = repo.split('/');\n  return [{\n    json: {\n      repoOwner,\n      repoName,\n      repo,\n      number: pr.number,\n      title: pr.title,\n      author,\n      updateType,\n      expectedHeadSha: pr.headRefOid,\n      mergeMethod,\n    },\n  }];\n});"
+        "jsCode": "const owner = 'ignazio-ingenito';\nconst allowedAuthors = new Set(['renovate', 'dependabot']);\n\nfunction parseSemver(value) {\n  const match = String(value || '').match(/v?(\\d+)\\.(\\d+)\\.(\\d+)/);\n  return match ? match.slice(1, 4).map(Number) : null;\n}\n\nfunction classify(pr) {\n  const title = String(pr.title || '');\n  const body = String(pr.body || '');\n  const labels = (pr.labels?.nodes || []).map((label) => String(label.name || '').toLowerCase());\n\n  if (labels.some((label) => label === 'security' || label === 'security-update') || /\\[security\\]/i.test(title)) return 'security';\n  if (/\\|\\s*digest\\s*\\|/i.test(body) || /\\bdigest\\b/i.test(title)) return 'digest';\n  const renovateType = body.match(/\\|\\s*(major|minor|patch)\\s*\\|/i);\n  if (renovateType) return renovateType[1].toLowerCase();\n\n  const dependabot = title.match(/\\bfrom\\s+([^\\s`]+)\\s+to\\s+([^\\s`]+)/i);\n  if (dependabot) {\n    const from = parseSemver(dependabot[1]);\n    const to = parseSemver(dependabot[2]);\n    if (from && to) {\n      if (to[0] !== from[0]) return 'major';\n      if (to[1] !== from[1]) return 'minor';\n      if (to[2] !== from[2]) return 'patch';\n    }\n  }\n\n  const versions = [...`${title}\\n${body}`.matchAll(/v?(\\d+)\\.(\\d+)\\.(\\d+)/g)].map((m) => m.slice(1, 4).map(Number));\n  if (versions.length >= 2) {\n    const from = versions[0];\n    const to = versions[1];\n    if (to[0] !== from[0]) return 'major';\n    if (to[1] !== from[1]) return 'minor';\n    if (to[2] !== from[2]) return 'patch';\n  }\n  return null;\n}\n\nconst payload = $input.all()[0]?.json || {};\nconst prs = payload.data?.search?.nodes || [];\n\nreturn prs.flatMap((pr) => {\n  const author = pr.author?.login || '';\n  const repo = pr.repository?.nameWithOwner || '';\n  const head = pr.headRefName || '';\n  const status = pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.state || null;\n\n  if (!repo.startsWith(`${owner}/`)) return [];\n  if (!allowedAuthors.has(author)) return [];\n  if (pr.isDraft) return [];\n  if (author === 'renovate' && !head.startsWith('renovate/')) return [];\n  if (author === 'dependabot' && !head.startsWith('dependabot/')) return [];\n  if (/configure renovate|renovate onboarding/i.test(`${pr.title || ''}\\n${pr.body || ''}`)) return [];\n  if (pr.mergeable !== 'MERGEABLE' || pr.mergeStateStatus !== 'CLEAN') return [];\n  if (status !== 'SUCCESS') return [];\n  if (pr.reviewDecision === 'CHANGES_REQUESTED' || pr.reviewDecision === 'REVIEW_REQUIRED') return [];\n\n  const updateType = classify(pr);\n  if (!updateType || updateType === 'major') return [];\n\n  const mergeMethod = pr.repository?.squashMergeAllowed ? 'squash' : pr.repository?.mergeCommitAllowed ? 'merge' : pr.repository?.rebaseMergeAllowed ? 'rebase' : null;\n  if (!mergeMethod) return [];\n\n  const [repoOwner, repoName] = repo.split('/');\n  return [{ json: { repoOwner, repoName, repo, number: pr.number, title: pr.title, author, updateType, expectedHeadSha: pr.headRefOid, mergeMethod } }];\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -69,43 +53,24 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"sha\": \"{{$json.expectedHeadSha}}\",\n  \"merge_method\": \"{{$json.mergeMethod}}\"\n}",
-        "options": {
-          "sendCredentialsOnCrossOriginRedirect": true
-        }
+        "options": {"sendCredentialsOnCrossOriginRedirect": true}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [144, 0],
       "id": "3443f43f-41de-46cd-b381-0ed55a7e6ef8",
       "name": "Merge PR with head SHA",
-      "credentials": {
-        "githubApi": {
-          "id": "eASX8oZcknKPY1lX",
-          "name": "GitHub account"
-        }
-      }
+      "credentials": {"githubApi": {"id": "eZohW3VQVXynF9jL", "name": "GitHub account"}}
     }
   ],
   "connections": {
-    "Every 15 minutes": {
-      "main": [[{"node": "Find open dependency PRs", "type": "main", "index": 0}]]
-    },
-    "Find open dependency PRs": {
-      "main": [[{"node": "Evaluate PR eligibility", "type": "main", "index": 0}]]
-    },
-    "Evaluate PR eligibility": {
-      "main": [[{"node": "Merge PR with head SHA", "type": "main", "index": 0}]]
-    }
+    "Every 15 minutes": {"main": [[{"node": "Find open dependency PRs", "type": "main", "index": 0}]]},
+    "Find open dependency PRs": {"main": [[{"node": "Evaluate PR eligibility", "type": "main", "index": 0}]]},
+    "Evaluate PR eligibility": {"main": [[{"node": "Merge PR with head SHA", "type": "main", "index": 0}]]}
   },
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": false
-  },
+  "settings": {"executionOrder": "v1", "binaryMode": "separate", "availableInMCP": false},
   "staticData": null,
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
+  "meta": {"templateCredsSetupCompleted": true},
   "nodeGroups": [],
   "pinData": {},
   "versionId": "1e403b4c-ff25-4dbe-b895-c37d47e85ed8",
