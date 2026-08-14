@@ -17,4 +17,4 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Validate JSON syntax
-        run: find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq -e empty
+        run: find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
