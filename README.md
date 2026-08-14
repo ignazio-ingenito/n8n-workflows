@@ -34,9 +34,9 @@ scripts/    Script operativi di export.
 - immagine n8n: definita esclusivamente dal Deployment in `homelab`, senza
   duplicarne qui il tag corrente
 - persistenza: PostgreSQL via CNPG più PVC `n8n-data`
-- entitlement n8n Source Control: non assumere disponibile o indisponibile;
-  deve essere verificato sul runtime/licensing corrente prima di usarlo come
-  vincolo progettuale
+- entitlement n8n Source Control: **non verificato**; il check live tentato in
+  Wave #33 Task 9 è rimasto bloccato da indisponibilità del cluster. Non
+  assumere disponibile o indisponibile finché non esiste nuova evidenza live.
 
 ## Regole per i workflow
 
@@ -61,8 +61,12 @@ scripts/    Script operativi di export.
   precedentemente attivi possono restare in esecuzione dopo un import fino al
   restart. Di conseguenza, ripristinare lo stato published nel DB non prova che
   la nuova definizione importata sia già quella eseguita dal runtime.
-- Questa dipendenza dallo stato live è comportamento corrente, non una decisione
-  target definitiva, ed è sotto riesame nella Wave #33 Task 9.
+- Wave #33 Task 9 ha concluso **KEEP minimo** dell'importer corrente: rimuoverlo
+  eliminerebbe il percorso operativo Git → database n8n e nessun replacement
+  equivalente è stato verificato nell'installazione corrente. Il caveat sullo
+  stato live resta esplicito e non va coperto con ulteriore custom; rivalutare
+  l'owner solo quando esiste nuova evidenza live o una capability upstream
+  cambiata.
 - Se serve un backup versionato delle credenziali, usa solo export non
   decrittati e cifrali con SOPS sotto `credentials/*.enc.json`.
 - Non committare mai export credentials con `--decrypted`.
