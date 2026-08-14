@@ -1,5 +1,12 @@
 # Job Search Radar n8n Handoff
 
+**Status:** Archived
+
+Historical handoff from 2026-06-11. It records the workflow and importer context
+at that time and must not be used as current guidance for n8n import/publication
+behavior. For current repository guidance use `README.md` and `CONTEXT.md`; for
+importer runtime behavior use the Active Homelab importer runbook.
+
 Date: 2026-06-11
 
 ## Goal

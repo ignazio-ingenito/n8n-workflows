@@ -1,5 +1,13 @@
 # n8n Workflows GitOps Handoff
 
+**Status:** Archived
+
+Historical handoff from 2026-05-29. It records the design state at that time and
+must not be used as current operating guidance. For current repository guidance
+use `README.md` and `CONTEXT.md`; for importer runtime behavior use
+`ignazio-ingenito/homelab/gitops/apps/n8n-workflows/import-job.yaml` and
+`ignazio-ingenito/homelab/doc/28-n8n-workflow-gitops-importer.md`.
+
 Date: 2026-05-29
 
 ## Goal
