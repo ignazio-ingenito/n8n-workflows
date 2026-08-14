@@ -46,13 +46,23 @@ scripts/    Script operativi di export.
   gestiti con SOPS. Non vanno nei file JSON.
 - Metti i workflow in `workflows/`, preferibilmente un file per workflow.
 - Usa nomi stabili e descrittivi, per esempio `daily-report.json`.
-- `n8n import:workflow` disattiva i workflow importati per default. L'importer
-  Homelab corrente fotografa prima dell'import quali workflow presenti in Git
-  sono già pubblicati e, dopo l'import, ripubblica soltanto quelli. I workflow
-  nuovi restano quindi inattivi al primo import; la prima attivazione resta una
-  decisione runtime manuale. La preservazione dello stato live è comportamento
-  corrente, non una decisione target definitiva, ed è sotto riesame nella Wave
-  #33 Task 9.
+- In n8n 2.x usa i termini **published/unpublished** per lo stato runtime. Il
+  campo JSON legacy `active` può ancora comparire negli export.
+- `n8n import:workflow` rende i workflow importati unpublished per default.
+  L'importer Homelab corrente fotografa prima dell'import quali workflow
+  presenti in Git risultano già published e, dopo l'import, esegue
+  `publish:workflow` soltanto per quelli. I workflow nuovi restano quindi
+  unpublished al primo import; la prima pubblicazione resta una decisione
+  runtime manuale.
+- La preservazione corrente è soprattutto **stato persistito nel DB**. La
+  documentazione upstream del Server CLI specifica che `publish:workflow`
+  eseguito mentre n8n è in funzione richiede un restart perché il cambiamento
+  abbia effetto nel processo. Inoltre, sulle istanze non multi-main i cron
+  precedentemente attivi possono restare in esecuzione dopo un import fino al
+  restart. Di conseguenza, ripristinare lo stato published nel DB non prova che
+  la nuova definizione importata sia già quella eseguita dal runtime.
+- Questa dipendenza dallo stato live è comportamento corrente, non una decisione
+  target definitiva, ed è sotto riesame nella Wave #33 Task 9.
 - Se serve un backup versionato delle credenziali, usa solo export non
   decrittati e cifrali con SOPS sotto `credentials/*.enc.json`.
 - Non committare mai export credentials con `--decrypted`.
@@ -72,11 +82,12 @@ Per aggiornare il repository dopo la review:
 ./scripts/export-live.sh --apply
 ```
 
-`--apply` copia i workflow in `workflows/` forzando `active: false`, poi cifra
-subito gli export credentials non decrittati in `credentials/*.enc.json`.
-Questo normalizza il contenuto versionato e non descrive lo stato di
-pubblicazione steady-state: l'importer Homelab corrente preserva separatamente i
-workflow già pubblicati nel runtime.
+`--apply` copia i workflow in `workflows/` forzando il campo legacy
+`active: false`, poi cifra subito gli export credentials non decrittati in
+`credentials/*.enc.json`. Questo normalizza il contenuto versionato e non
+descrive da solo lo stato published steady-state: l'importer Homelab corrente
+gestisce separatamente la preservazione dello stato persistito dei workflow già
+published.
 
 Per un restore drill, decritta gli export credentials solo in una directory
 temporanea fuori dal repository e importali da lì.
@@ -204,9 +215,11 @@ corrente.
 `CRITICAL` maggiore di zero. Le scansioni senza `HIGH`/`CRITICAL` rispondono
 con `notified: false` e non attraversano il nodo Slack.
 
-Al primo import un workflow nuovo resta inattivo. Se lo stesso workflow è già
-pubblicato nel runtime, l'importer corrente tenta di preservarne la
-pubblicazione. Prima della prima attivazione associa:
+Al primo import un workflow nuovo resta unpublished. Se lo stesso workflow era
+già published, l'importer corrente ripristina nel database il relativo stato di
+pubblicazione; questo non garantisce da solo che una nuova definizione importata
+sia caricata nel processo n8n senza restart. Prima della prima pubblicazione
+associa:
 
 - al nodo `Receive Harbor Scan`, la credenziale HTTP Header Auth richiesta dal
   runtime Harbor/n8n corrente; il valore della credenziale non appartiene a
@@ -239,9 +252,9 @@ Il workflow:
   marcando il messaggio come letto e archiviandolo;
 - se Slack fallisce, il cleanup Gmail non viene eseguito e il messaggio sorgente
   resta disponibile per troubleshooting/retry;
-- viene versionato con `active: false`; al primo import resta inattivo, mentre
-  gli import successivi possono preservarne la pubblicazione se era già
-  pubblicato nel runtime corrente.
+- viene versionato con il campo legacy `active: false`; al primo import resta
+  unpublished. Gli import successivi ripristinano nel DB lo stato published se
+  lo era già, con la stessa caveat sul restart del processo descritta sopra.
 
 In n8n associa la stessa credenziale Google/Gmail OAuth2 sia al nodo
 `Receive UptimeRobot Gmail` sia al nodo `Mark Read and Archive Gmail`. Il nodo
