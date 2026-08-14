@@ -33,7 +33,7 @@ Before changing workflow files, scripts, or GitOps integration documents:
 6. Use `grill-with-docs` for architecture, workflow ownership, or deployment
    model changes.
 7. Use `writing-plans` for multi-step implementation plans.
-8. Use `systematic-debugging` before fixing unexplained import, activation, or
+8. Use `systematic-debugging` before fixing unexplained import, publication, or
    runtime failures.
 9. Use `verification-before-completion` before claiming an import, validation,
    or deployment path works.
@@ -58,8 +58,9 @@ Before changing workflow files, scripts, or GitOps integration documents:
 - Run `find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty` before committing workflow changes.
 - Review exported credential names and IDs before committing. IDs are not secret
   by themselves, but names can reveal sensitive systems or accounts.
-- Avoid committing test-only active workflows until the activation strategy is
-  explicitly implemented.
+- In n8n 2.x describe runtime state as published/unpublished. Treat the legacy
+  JSON `active` field as serialization compatibility, not the preferred runtime
+  terminology.
 
 ## Integration Rules
 
@@ -67,10 +68,16 @@ Before changing workflow files, scripts, or GitOps integration documents:
   `/home/iingenito/projects/personal/homelab`.
 - The deployed import mechanism is a GitOps-managed Kubernetes Job that uses the
   same n8n image and database environment as the live n8n deployment.
-- `n8n import:workflow` leaves imported workflows inactive by default. The
+- `n8n import:workflow` makes imported workflows unpublished by default. The
   current Homelab importer snapshots which Git-managed workflows were already
-  published before import and republishes only those afterwards. New workflows
-  remain inactive until their first explicit runtime activation.
+  published before import and runs `publish:workflow` for those IDs afterwards.
+  New workflows remain unpublished until their first explicit runtime
+  publication.
+- Do not equate restored database publication state with an updated live
+  runtime. Upstream Server CLI behavior requires a restart for
+  `publish:workflow` changes to take effect in a running n8n process, and
+  non-multi-main imports can leave previously active cron triggers running until
+  restart.
 - The live publication-state preservation above is current behavior, not a
   permanent invariant. Wave #33 Task 9 is responsible for reevaluating whether
   native/upstream ownership can replace it with less complexity.
