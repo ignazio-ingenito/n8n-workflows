@@ -93,10 +93,10 @@ Add a note that generated Baialupo articles may include an `expires` frontmatter
 Run:
 
 ```bash
-./scripts/validate-workflows.sh
+find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 ```
 
-Expected: the new workflow JSON parses and the repo contains no secret material in the workflow export.
+Expected: the new workflow JSON parses. Secret leakage is checked separately in the following diff review.
 
 - [ ] **Step 2: Inspect the diff for accidental secret leakage**
 

@@ -37,7 +37,7 @@ Before changing workflow files, scripts, or GitOps integration documents:
 
 ## Repository Boundaries
 
-- This repository owns exported n8n workflow JSON and local validation helpers.
+- This repository owns exported n8n workflow JSON and local export helpers.
 - The `homelab` repository owns Kubernetes, ArgoCD, SOPS, CNPG, HTTPRoute, and
   runtime deployment manifests.
 - Do not add Kubernetes secrets to this repository.
@@ -50,7 +50,7 @@ Before changing workflow files, scripts, or GitOps integration documents:
 
 - Store workflow files under `workflows/`.
 - Prefer one workflow per file.
-- Run `./scripts/validate-workflows.sh` before committing workflow changes.
+- Run `find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty` before committing workflow changes.
 - Review exported credential names and IDs before committing. IDs are not secret
   by themselves, but names can reveal sensitive systems or accounts.
 - Avoid committing test-only active workflows until the activation strategy is

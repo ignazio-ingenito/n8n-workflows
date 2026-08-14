@@ -108,4 +108,5 @@ if [ "${credential_count}" -gt 0 ]; then
       done
 fi
 
-"${root_dir}/scripts/validate-workflows.sh"
+find "${root_dir}/workflows" -type f -name '*.json' -print0 \
+  | xargs -0 -r -n1 jq empty
