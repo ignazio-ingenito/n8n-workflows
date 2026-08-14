@@ -1,5 +1,7 @@
 # n8n Workflows Context
 
+**Status:** Active
+
 ## Glossary
 
 **Workflow Repository**: This repository, intended to store n8n workflow JSON
@@ -11,11 +13,10 @@ source of truth for Kubernetes, ArgoCD, SOPS, CNPG, and app manifests.
 **Workflow JSON**: The JSON representation of an n8n workflow exported from n8n
 or authored for import into n8n.
 
-**Importer Job**: A Kubernetes Job, managed from the homelab repository, that
-loads workflow JSON files into the n8n database.
-
-**Activation Allowlist**: A future explicit list of workflow IDs or file names
-that may be activated automatically after import.
+**Importer Job**: The Kubernetes Job managed from the homelab repository that
+loads workflow JSON files into the n8n database. The current implementation
+snapshots which Git-managed workflows are already published before import and
+republishes only those after import.
 
 **Credential Stub**: A workflow reference to an n8n credential by ID or name. It
 does not contain the credential value, but can still disclose sensitive naming.
@@ -29,8 +30,9 @@ disaster recovery. In this repository it must be SOPS-encrypted under
 must not be committed.
 
 **n8n Source Control**: n8n's native Git integration for environments. It is not
-available for this installation because no Business/Enterprise license is
-present.
+configured by the repository state verified for Task 9. Its current licensing
+entitlement must be checked on the live n8n installation before availability or
+unavailability is used as a design constraint.
 
 **Alert Query History**: The operational history of job-alert query quality for
 `Job Search Email Alerts`. It is stored in the n8n Data Table
@@ -50,9 +52,18 @@ or reset from the n8n UI.
   - `/home/iingenito/projects/personal/resume/job-search/scoring-model.md`
   - `/home/iingenito/projects/personal/resume/automations/n8n-workflows.md`
 - Use a repository separate from `homelab` for workflow JSON.
-- Do not rely on n8n Source Control.
-- Plan for GitOps import through Kubernetes, not manual pod mutation.
-- Import workflows as inactive and keep activation manual in the n8n UI.
+- The deployed import path is the Kubernetes Job owned by `homelab`; it is not a
+  future/planned mechanism.
+- Git is the source of workflow definitions. The current importer nevertheless
+  reads live publication state before import and preserves that state for
+  workflows already published. This hidden live-state dependency is current
+  behavior, not a target invariant, and is under review in Wave #33 Task 9.
+- `n8n import:workflow` leaves imported workflows inactive by default. New
+  workflows therefore remain inactive on first import; first publication is a
+  manual runtime decision. Existing Git-managed workflows that were already
+  published are republished by the current importer after import.
+- Do not assume n8n Source Control is available or unavailable until the current
+  entitlement is verified.
 - Version workflow JSON in clear text after review.
 - Version credential export backups only when they are non-decrypted and
   SOPS-encrypted.
@@ -60,12 +71,21 @@ or reset from the n8n UI.
   `job_alert_query_history`, not workflow static data, so test runs can be reset
   manually and the rolling 5-cycle recommendation window remains auditable.
 
-## Open Questions
+## Current Open Question
 
-- Should workflow JSON be exported from the live instance first, or should a
-  dummy workflow prove the import path before exporting current workflows?
-- Should this repository get its own GitHub Actions validation workflow before
-  ArgoCD integration?
+- For Wave #33 Task 9, verify the live n8n Source Control entitlement before
+  choosing whether the importer can move to a native n8n ownership model or
+  needs another deterministic Git-to-runtime path.
+
+## Documentation Authority
+
+- `README.md` is the current repository-level operating description.
+- Runtime importer behavior is authoritative in
+  `ignazio-ingenito/homelab/gitops/apps/n8n-workflows/import-job.yaml` and its
+  runbook `ignazio-ingenito/homelab/doc/28-n8n-workflow-gitops-importer.md`.
+- Dated files under `docs/` are historical handoffs unless explicitly promoted
+  to an Active source. They must not override current manifests, README, or this
+  context.
 
 ## Repository Scope Reminder
 
