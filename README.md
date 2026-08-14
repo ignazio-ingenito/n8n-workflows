@@ -1,5 +1,7 @@
 # Workflow n8n
 
+**Status:** Active
+
 Questo repository raccoglie i workflow n8n in formato JSON. L'obiettivo è
 tenerli sotto versionamento e importarli, quando serve, nell'istanza n8n
 dell'homelab tramite un Job Kubernetes gestito via GitOps.
@@ -8,12 +10,17 @@ Il repository resta separato da `homelab` per una ragione pratica: i workflow
 cambiano più spesso dei manifest infrastrutturali, e conviene revisarli senza
 mescolarli al codice Kubernetes.
 
+Il comportamento runtime dell'importer non è definito qui: la fonte autorevole è
+`ignazio-ingenito/homelab`, in particolare
+`gitops/apps/n8n-workflows/import-job.yaml` e
+`doc/28-n8n-workflow-gitops-importer.md`.
+
 ## Struttura
 
 ```text
 workflows/  Workflow n8n esportati in JSON, uno per file.
 credentials/ Export credenziali n8n non decrittati, cifrati con SOPS.
-docs/       Note operative, piani e handoff.
+docs/       Note operative, piani e handoff storici.
 scripts/    Script operativi di export.
 ```
 
@@ -22,9 +29,14 @@ scripts/    Script operativi di export.
 - istanza n8n: `https://n8n.skunklabs.uk`
 - base URL dei webhook: `https://hooks.skunklabs.uk`
 - namespace Kubernetes: `apps`
-- manifest homelab: `/home/iingenito/projects/personal/homelab/gitops/apps/n8n`
-- immagine n8n osservata nel cluster il 2026-06-11: `n8nio/n8n:2.26.2`
+- deployment n8n: `homelab/gitops/apps/n8n/deployment.yaml`
+- importer workflow: `homelab/gitops/apps/n8n-workflows/import-job.yaml`
+- immagine n8n: definita esclusivamente dal Deployment in `homelab`, senza
+  duplicarne qui il tag corrente
 - persistenza: PostgreSQL via CNPG più PVC `n8n-data`
+- entitlement n8n Source Control: non assumere disponibile o indisponibile;
+  deve essere verificato sul runtime/licensing corrente prima di usarlo come
+  vincolo progettuale
 
 ## Regole per i workflow
 
@@ -34,8 +46,23 @@ scripts/    Script operativi di export.
   gestiti con SOPS. Non vanno nei file JSON.
 - Metti i workflow in `workflows/`, preferibilmente un file per workflow.
 - Usa nomi stabili e descrittivi, per esempio `daily-report.json`.
-- L'import lascia i workflow inattivi. L'attivazione si fa manualmente dalla UI
-  di n8n.
+- In n8n 2.x usa i termini **published/unpublished** per lo stato runtime. Il
+  campo JSON legacy `active` può ancora comparire negli export.
+- `n8n import:workflow` rende i workflow importati unpublished per default.
+  L'importer Homelab corrente fotografa prima dell'import quali workflow
+  presenti in Git risultano già published e, dopo l'import, esegue
+  `publish:workflow` soltanto per quelli. I workflow nuovi restano quindi
+  unpublished al primo import; la prima pubblicazione resta una decisione
+  runtime manuale.
+- La preservazione corrente è soprattutto **stato persistito nel DB**. La
+  documentazione upstream del Server CLI specifica che `publish:workflow`
+  eseguito mentre n8n è in funzione richiede un restart perché il cambiamento
+  abbia effetto nel processo. Inoltre, sulle istanze non multi-main i cron
+  precedentemente attivi possono restare in esecuzione dopo un import fino al
+  restart. Di conseguenza, ripristinare lo stato published nel DB non prova che
+  la nuova definizione importata sia già quella eseguita dal runtime.
+- Questa dipendenza dallo stato live è comportamento corrente, non una decisione
+  target definitiva, ed è sotto riesame nella Wave #33 Task 9.
 - Se serve un backup versionato delle credenziali, usa solo export non
   decrittati e cifrali con SOPS sotto `credentials/*.enc.json`.
 - Non committare mai export credentials con `--decrypted`.
@@ -55,8 +82,12 @@ Per aggiornare il repository dopo la review:
 ./scripts/export-live.sh --apply
 ```
 
-`--apply` copia i workflow in `workflows/` forzando `active: false`, poi cifra
-subito gli export credentials non decrittati in `credentials/*.enc.json`.
+`--apply` copia i workflow in `workflows/` forzando il campo legacy
+`active: false`, poi cifra subito gli export credentials non decrittati in
+`credentials/*.enc.json`. Questo normalizza il contenuto versionato e non
+descrive da solo lo stato published steady-state: l'importer Homelab corrente
+gestisce separatamente la preservazione dello stato persistito dei workflow già
+published.
 
 Per un restore drill, decritta gli export credentials solo in una directory
 temporanea fuori dal repository e importali da lì.
@@ -152,11 +183,9 @@ Source of truth strategica:
 /home/iingenito/projects/personal/resume/automations/n8n-workflows.md
 ```
 
-Handoff operativo:
-
-```text
-docs/2026-06-11-job-search-radar-handoff.md
-```
+Il documento `docs/2026-06-11-job-search-radar-handoff.md` è un handoff storico:
+può essere usato per ricostruire il contesto, non come fonte corrente del
+comportamento dell'importer.
 
 ## Validazione
 
@@ -164,13 +193,19 @@ docs/2026-06-11-job-search-radar-handoff.md
 find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 ```
 
-## Prossimo handoff
+## Runtime GitOps
 
-Parti da qui:
+Per il comportamento corrente dell'importer usa la fonte Homelab:
 
 ```text
-docs/2026-05-29-n8n-workflows-gitops-handoff.md
+ignazio-ingenito/homelab
+  gitops/apps/n8n-workflows/import-job.yaml
+  doc/28-n8n-workflow-gitops-importer.md
 ```
+
+`docs/2026-05-29-n8n-workflows-gitops-handoff.md` descrive il progetto iniziale
+dell'importer ed è contesto storico; non va usato per dedurre lo stato runtime
+corrente.
 
 ## Harbor scan alerts
 
@@ -180,12 +215,16 @@ docs/2026-05-29-n8n-workflows-gitops-handoff.md
 `CRITICAL` maggiore di zero. Le scansioni senza `HIGH`/`CRITICAL` rispondono
 con `notified: false` e non attraversano il nodo Slack.
 
-Il workflow viene importato inattivo. Prima dell'attivazione associa:
+Al primo import un workflow nuovo resta unpublished. Se lo stesso workflow era
+già published, l'importer corrente ripristina nel database il relativo stato di
+pubblicazione; questo non garantisce da solo che una nuova definizione importata
+sia caricata nel processo n8n senza restart. Prima della prima pubblicazione
+associa:
 
-- al nodo `Receive Harbor Scan`, una credenziale HTTP Header Auth con nome
-  `Authorization` e valore `Bearer <token>`, costruito a partire dallo stesso
-  token puro conservato con SOPS e usato dal reconciler Harbor nel repository
-  `homelab`;
+- al nodo `Receive Harbor Scan`, la credenziale HTTP Header Auth richiesta dal
+  runtime Harbor/n8n corrente; il valore della credenziale non appartiene a
+  questo repository e la sua ownership va verificata nella configurazione
+  Homelab corrente;
 - al nodo `Notify harbor-security`, una credenziale Slack Access Token con
   permesso `chat:write` e accesso al canale `#harbor-security`, selezionando in
   UI il channel ID reale del canale.
@@ -213,8 +252,9 @@ Il workflow:
   marcando il messaggio come letto e archiviandolo;
 - se Slack fallisce, il cleanup Gmail non viene eseguito e il messaggio sorgente
   resta disponibile per troubleshooting/retry;
-- viene versionato con `active: false`; la prima attivazione resta una decisione
-  runtime in n8n.
+- viene versionato con il campo legacy `active: false`; al primo import resta
+  unpublished. Gli import successivi ripristinano nel DB lo stato published se
+  lo era già, con la stessa caveat sul restart del processo descritta sopra.
 
 In n8n associa la stessa credenziale Google/Gmail OAuth2 sia al nodo
 `Receive UptimeRobot Gmail` sia al nodo `Mark Read and Archive Gmail`. Il nodo

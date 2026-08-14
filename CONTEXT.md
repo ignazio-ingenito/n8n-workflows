@@ -1,5 +1,7 @@
 # n8n Workflows Context
 
+**Status:** Active
+
 ## Glossary
 
 **Workflow Repository**: This repository, intended to store n8n workflow JSON
@@ -11,11 +13,15 @@ source of truth for Kubernetes, ArgoCD, SOPS, CNPG, and app manifests.
 **Workflow JSON**: The JSON representation of an n8n workflow exported from n8n
 or authored for import into n8n.
 
-**Importer Job**: A Kubernetes Job, managed from the homelab repository, that
-loads workflow JSON files into the n8n database.
+**Importer Job**: The Kubernetes Job managed from the homelab repository that
+loads workflow JSON files into the n8n database. The current implementation
+snapshots which Git-managed workflows are already published before import and
+runs `publish:workflow` for those IDs after import.
 
-**Activation Allowlist**: A future explicit list of workflow IDs or file names
-that may be activated automatically after import.
+**Published Workflow**: n8n 2.x terminology for a workflow version that is live
+for trigger execution. Older exports and CLI flags can still expose the legacy
+`active` field/name. Current documentation should prefer published/unpublished
+when describing runtime state.
 
 **Credential Stub**: A workflow reference to an n8n credential by ID or name. It
 does not contain the credential value, but can still disclose sensitive naming.
@@ -29,8 +35,9 @@ disaster recovery. In this repository it must be SOPS-encrypted under
 must not be committed.
 
 **n8n Source Control**: n8n's native Git integration for environments. It is not
-available for this installation because no Business/Enterprise license is
-present.
+configured by the repository state verified for Task 9. Its current licensing
+entitlement must be checked on the live n8n installation before availability or
+unavailability is used as a design constraint.
 
 **Alert Query History**: The operational history of job-alert query quality for
 `Job Search Email Alerts`. It is stored in the n8n Data Table
@@ -50,9 +57,24 @@ or reset from the n8n UI.
   - `/home/iingenito/projects/personal/resume/job-search/scoring-model.md`
   - `/home/iingenito/projects/personal/resume/automations/n8n-workflows.md`
 - Use a repository separate from `homelab` for workflow JSON.
-- Do not rely on n8n Source Control.
-- Plan for GitOps import through Kubernetes, not manual pod mutation.
-- Import workflows as inactive and keep activation manual in the n8n UI.
+- The deployed import path is the Kubernetes Job owned by `homelab`; it is not a
+  future/planned mechanism.
+- Git is the source of workflow definitions. The current importer nevertheless
+  reads live publication state before import and restores the corresponding
+  published state in the database for workflows that were already published.
+  This hidden live-state dependency is current behavior, not a target invariant,
+  and is under review in Wave #33 Task 9.
+- `n8n import:workflow` makes imported workflows unpublished by default. New
+  workflows therefore remain unpublished on first import; first publication is
+  a manual runtime decision.
+- On the current non-multi-main design, import/publish through the Server CLI
+  has a runtime caveat: previously running cron triggers can remain loaded after
+  import, while `publish:workflow` changes made against the live database do not
+  take effect in the running n8n process until restart. Restoring published DB
+  state therefore does not prove that a newly imported workflow version is the
+  version currently executing.
+- Do not assume n8n Source Control is available or unavailable until the current
+  entitlement is verified.
 - Version workflow JSON in clear text after review.
 - Version credential export backups only when they are non-decrypted and
   SOPS-encrypted.
@@ -60,19 +82,31 @@ or reset from the n8n UI.
   `job_alert_query_history`, not workflow static data, so test runs can be reset
   manually and the rolling 5-cycle recommendation window remains auditable.
 
-## Open Questions
+## Current Open Question
 
-- Should workflow JSON be exported from the live instance first, or should a
-  dummy workflow prove the import path before exporting current workflows?
-- Should this repository get its own GitHub Actions validation workflow before
-  ArgoCD integration?
+- For Wave #33 Task 9, verify the live n8n Source Control entitlement before
+  choosing whether the importer can move to a native n8n ownership model or
+  needs another deterministic Git-to-runtime path. The Server CLI exposes
+  `n8n license:info` for inspecting the installed license state.
+
+## Documentation Authority
+
+- `README.md` is the current repository-level operating description.
+- Runtime importer behavior is authoritative in
+  `ignazio-ingenito/homelab/gitops/apps/n8n-workflows/import-job.yaml` and its
+  runbook `ignazio-ingenito/homelab/doc/28-n8n-workflow-gitops-importer.md`.
+- Dated files under `docs/` are historical handoffs unless explicitly promoted
+  to an Active source. They must not override current manifests, README, or this
+  context.
 
 ## Repository Scope Reminder
 
-This repository is the operational companion for the job-search automations.
-It stores exported workflow JSON, import and activation notes, and the UI-level
-credential binding steps needed to make the workflows run.
+This repository stores and reviews n8n workflow definitions plus the minimal
+export/import operating context needed to manage them. It currently includes
+workflows for several domains, including job-search, Baialupo and homelab
+notifications.
 
-It does not own the underlying positioning model, target-role taxonomy, query
-seed set, scoring model, or market-observatory rules; those remain in the
-`resume` repository and should be edited there first.
+Domain-specific sources of truth stay with their owning repositories. In
+particular, job-search positioning, target-role taxonomy, query seeds, scoring
+and market-observatory rules remain in the `resume` repository and should be
+edited there first.

@@ -1,5 +1,7 @@
 # n8n Workflows Agent Instructions
 
+**Status:** Active
+
 ## Agent OS e lifecycle delle skill
 
 - Prima di analizzare, pianificare, modificare o creare issue o pull request, si DEVE leggere integralmente la versione corrente di [RFC-0001 – Principi fondanti della Software Factory](https://github.com/ignazio-ingenito/agent-os/blob/main/rfcs/RFC-0001-principles.md).
@@ -21,7 +23,9 @@ file names, commands, commit messages, and technical identifiers in English.
 
 Before changing workflow files, scripts, or GitOps integration documents:
 
-1. Read `AGENTS.md`, `README.md`, `CONTEXT.md`, and the relevant file in `docs/`.
+1. Read `AGENTS.md`, `README.md`, `CONTEXT.md`, and any relevant Active document.
+   Dated handoffs under `docs/` are historical context unless explicitly marked
+   Active and must not override current manifests or repository-level sources.
 2. Check `git status` before editing.
 3. Treat workflow JSON as executable automation, not passive data.
 4. Inspect workflow JSON for secrets before committing.
@@ -29,7 +33,7 @@ Before changing workflow files, scripts, or GitOps integration documents:
 6. Use `grill-with-docs` for architecture, workflow ownership, or deployment
    model changes.
 7. Use `writing-plans` for multi-step implementation plans.
-8. Use `systematic-debugging` before fixing unexplained import, activation, or
+8. Use `systematic-debugging` before fixing unexplained import, publication, or
    runtime failures.
 9. Use `verification-before-completion` before claiming an import, validation,
    or deployment path works.
@@ -39,12 +43,13 @@ Before changing workflow files, scripts, or GitOps integration documents:
 
 - This repository owns exported n8n workflow JSON and local export helpers.
 - The `homelab` repository owns Kubernetes, ArgoCD, SOPS, CNPG, HTTPRoute, and
-  runtime deployment manifests.
+  runtime deployment manifests, including the workflow importer Job.
 - Do not add Kubernetes secrets to this repository.
 - Do not store n8n API keys, GitHub tokens, credential values, OAuth tokens, or
   webhook secrets in this repository.
-- Do not assume n8n Source Control is available; this installation has no
-  Business/Enterprise license.
+- Do not assume n8n Source Control is available or unavailable. The current
+  entitlement must be verified on the live installation before licensing is
+  used as a design constraint.
 
 ## Workflow JSON Rules
 
@@ -53,17 +58,29 @@ Before changing workflow files, scripts, or GitOps integration documents:
 - Run `find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty` before committing workflow changes.
 - Review exported credential names and IDs before committing. IDs are not secret
   by themselves, but names can reveal sensitive systems or accounts.
-- Avoid committing test-only active workflows until the activation strategy is
-  explicitly implemented.
+- In n8n 2.x describe runtime state as published/unpublished. Treat the legacy
+  JSON `active` field as serialization compatibility, not the preferred runtime
+  terminology.
 
 ## Integration Rules
 
 - Durable Kubernetes changes belong in
   `/home/iingenito/projects/personal/homelab`.
-- The planned import mechanism is a GitOps-managed Kubernetes Job that uses the
+- The deployed import mechanism is a GitOps-managed Kubernetes Job that uses the
   same n8n image and database environment as the live n8n deployment.
-- First implementation should import workflows as inactive and verify visibility
-  in the n8n UI before adding automatic activation.
+- `n8n import:workflow` makes imported workflows unpublished by default. The
+  current Homelab importer snapshots which Git-managed workflows were already
+  published before import and runs `publish:workflow` for those IDs afterwards.
+  New workflows remain unpublished until their first explicit runtime
+  publication.
+- Do not equate restored database publication state with an updated live
+  runtime. Upstream Server CLI behavior requires a restart for
+  `publish:workflow` changes to take effect in a running n8n process, and
+  non-multi-main imports can leave previously active cron triggers running until
+  restart.
+- The live publication-state preservation above is current behavior, not a
+  permanent invariant. Wave #33 Task 9 is responsible for reevaluating whether
+  native/upstream ownership can replace it with less complexity.
 
 ## Skill Routing
 
