@@ -16,7 +16,12 @@ or authored for import into n8n.
 **Importer Job**: The Kubernetes Job managed from the homelab repository that
 loads workflow JSON files into the n8n database. The current implementation
 snapshots which Git-managed workflows are already published before import and
-republishes only those after import.
+runs `publish:workflow` for those IDs after import.
+
+**Published Workflow**: n8n 2.x terminology for a workflow version that is live
+for trigger execution. Older exports and CLI flags can still expose the legacy
+`active` field/name. Current documentation should prefer published/unpublished
+when describing runtime state.
 
 **Credential Stub**: A workflow reference to an n8n credential by ID or name. It
 does not contain the credential value, but can still disclose sensitive naming.
@@ -55,13 +60,19 @@ or reset from the n8n UI.
 - The deployed import path is the Kubernetes Job owned by `homelab`; it is not a
   future/planned mechanism.
 - Git is the source of workflow definitions. The current importer nevertheless
-  reads live publication state before import and preserves that state for
-  workflows already published. This hidden live-state dependency is current
-  behavior, not a target invariant, and is under review in Wave #33 Task 9.
-- `n8n import:workflow` leaves imported workflows inactive by default. New
-  workflows therefore remain inactive on first import; first publication is a
-  manual runtime decision. Existing Git-managed workflows that were already
-  published are republished by the current importer after import.
+  reads live publication state before import and restores the corresponding
+  published state in the database for workflows that were already published.
+  This hidden live-state dependency is current behavior, not a target invariant,
+  and is under review in Wave #33 Task 9.
+- `n8n import:workflow` makes imported workflows unpublished by default. New
+  workflows therefore remain unpublished on first import; first publication is
+  a manual runtime decision.
+- On the current non-multi-main design, import/publish through the Server CLI
+  has a runtime caveat: previously running cron triggers can remain loaded after
+  import, while `publish:workflow` changes made against the live database do not
+  take effect in the running n8n process until restart. Restoring published DB
+  state therefore does not prove that a newly imported workflow version is the
+  version currently executing.
 - Do not assume n8n Source Control is available or unavailable until the current
   entitlement is verified.
 - Version workflow JSON in clear text after review.
@@ -75,7 +86,8 @@ or reset from the n8n UI.
 
 - For Wave #33 Task 9, verify the live n8n Source Control entitlement before
   choosing whether the importer can move to a native n8n ownership model or
-  needs another deterministic Git-to-runtime path.
+  needs another deterministic Git-to-runtime path. The Server CLI exposes
+  `n8n license:info` for inspecting the installed license state.
 
 ## Documentation Authority
 
@@ -89,10 +101,12 @@ or reset from the n8n UI.
 
 ## Repository Scope Reminder
 
-This repository is the operational companion for the job-search automations.
-It stores exported workflow JSON, import and activation notes, and the UI-level
-credential binding steps needed to make the workflows run.
+This repository stores and reviews n8n workflow definitions plus the minimal
+export/import operating context needed to manage them. It currently includes
+workflows for several domains, including job-search, Baialupo and homelab
+notifications.
 
-It does not own the underlying positioning model, target-role taxonomy, query
-seed set, scoring model, or market-observatory rules; those remain in the
-`resume` repository and should be edited there first.
+Domain-specific sources of truth stay with their owning repositories. In
+particular, job-search positioning, target-role taxonomy, query seeds, scoring
+and market-observatory rules remain in the `resume` repository and should be
+edited there first.
