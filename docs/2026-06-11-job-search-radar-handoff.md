@@ -170,7 +170,7 @@ rather than judged only from individual job titles.
 Local repository validation:
 
 ```bash
-./scripts/validate-workflows.sh
+find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 ```
 
 Cluster visibility after GitOps import:

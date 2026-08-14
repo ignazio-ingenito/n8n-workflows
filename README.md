@@ -14,7 +14,7 @@ mescolarli al codice Kubernetes.
 workflows/  Workflow n8n esportati in JSON, uno per file.
 credentials/ Export credenziali n8n non decrittati, cifrati con SOPS.
 docs/       Note operative, piani e handoff.
-scripts/    Script locali di validazione.
+scripts/    Script operativi di export.
 ```
 
 ## Target attuale
@@ -161,7 +161,7 @@ docs/2026-06-11-job-search-radar-handoff.md
 ## Validazione
 
 ```bash
-./scripts/validate-workflows.sh
+find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 ```
 
 ## Prossimo handoff

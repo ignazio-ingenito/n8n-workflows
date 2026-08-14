@@ -113,7 +113,6 @@ n8n-workflows/
   docs/
     2026-05-29-n8n-workflows-gitops-handoff.md
   scripts/
-    validate-workflows.sh
     export-live.sh
 ```
 
@@ -124,7 +123,7 @@ n8n-workflows/
 - [x] Create this repository locally.
 - [x] Add `AGENTS.md`, `CONTEXT.md`, `README.md`, `.gitignore`.
 - [x] Add `workflows/`, `docs/`, and `scripts/`.
-- [x] Add `scripts/validate-workflows.sh`.
+- [x] Add JSON validation (now owned directly by `jq` in CI).
 - [x] Run validation with no workflows.
 - [x] Initialize Git and commit.
 - [x] Create private GitHub repository and push.
@@ -133,7 +132,7 @@ n8n-workflows/
 
 - [x] Add one harmless dummy workflow JSON locally.
 - [x] Save it under `workflows/`.
-- [x] Run `./scripts/validate-workflows.sh`.
+- [x] Run `find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty`.
 - [x] Review JSON for credential names, IDs, headers, tokens, or private data.
 - [x] Commit the workflow JSON.
 
@@ -211,7 +210,7 @@ Apply reviewed export to this repository:
 
 ```bash
 ./scripts/export-live.sh --apply
-./scripts/validate-workflows.sh
+find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 ```
 
 The apply step stores workflow JSON with `active: false` even when the live

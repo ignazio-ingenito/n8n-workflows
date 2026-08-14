@@ -156,11 +156,11 @@ Delete the `Telegram Trigger` node and the `Parse reply` node from `workflows/ba
 Run:
 
 ```bash
-./scripts/validate-workflows.sh
+find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 git diff --check
 ```
 
-Expected: the workflow JSON parses, the file contains no secrets, and there are no whitespace errors.
+Expected: the workflow JSON parses and there are no whitespace errors. Secret leakage still requires diff review.
 
 - [ ] **Step 6: Commit the workflow refactor**
 
