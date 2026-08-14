@@ -1,4 +1,4 @@
-name: Validate workflows
+name: Validate workflow JSON
 
 on:
   pull_request:
@@ -15,7 +15,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Validate workflow JSON
-        env:
-          VALIDATE_CREDENTIALS: "0"
-        run: ./scripts/validate-workflows.sh
+
+      - name: Validate JSON syntax
+        run: find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq -e empty
