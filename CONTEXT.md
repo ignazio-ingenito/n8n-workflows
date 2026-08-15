@@ -35,9 +35,10 @@ disaster recovery. In this repository it must be SOPS-encrypted under
 must not be committed.
 
 **n8n Source Control**: n8n's native Git integration for environments. It is not
-configured by the repository state verified for Task 9. Its current licensing
-entitlement must be checked on the live n8n installation before availability or
-unavailability is used as a design constraint.
+configured by the repository state verified for Task 9. The live entitlement
+check attempted during Task 9 was blocked by cluster unavailability, so current
+licensing entitlement remains unverified. Availability or unavailability must
+not be inferred from repository state.
 
 **Alert Query History**: The operational history of job-alert query quality for
 `Job Search Email Alerts`. It is stored in the n8n Data Table
@@ -59,11 +60,13 @@ or reset from the n8n UI.
 - Use a repository separate from `homelab` for workflow JSON.
 - The deployed import path is the Kubernetes Job owned by `homelab`; it is not a
   future/planned mechanism.
+- Wave #33 Task 9 concluded **KEEP minimal** for the current importer because
+  removing it would remove the operational Git → n8n database import path and
+  no equivalent replacement was verified for the current installation.
 - Git is the source of workflow definitions. The current importer nevertheless
   reads live publication state before import and restores the corresponding
   published state in the database for workflows that were already published.
-  This hidden live-state dependency is current behavior, not a target invariant,
-  and is under review in Wave #33 Task 9.
+  This hidden live-state dependency is current behavior, not a target invariant.
 - `n8n import:workflow` makes imported workflows unpublished by default. New
   workflows therefore remain unpublished on first import; first publication is
   a manual runtime decision.
@@ -73,8 +76,11 @@ or reset from the n8n UI.
   take effect in the running n8n process until restart. Restoring published DB
   state therefore does not prove that a newly imported workflow version is the
   version currently executing.
+- Task 9 did not resolve that caveat by adding more custom orchestration. Reassess
+  the importer only when live entitlement/runtime access or changed upstream
+  capabilities provide new evidence.
 - Do not assume n8n Source Control is available or unavailable until the current
-  entitlement is verified.
+  entitlement can be verified live.
 - Version workflow JSON in clear text after review.
 - Version credential export backups only when they are non-decrypted and
   SOPS-encrypted.
@@ -82,12 +88,14 @@ or reset from the n8n UI.
   `job_alert_query_history`, not workflow static data, so test runs can be reset
   manually and the rolling 5-cycle recommendation window remains auditable.
 
-## Current Open Question
+## Deferred Runtime Fact
 
-- For Wave #33 Task 9, verify the live n8n Source Control entitlement before
-  choosing whether the importer can move to a native n8n ownership model or
-  needs another deterministic Git-to-runtime path. The Server CLI exposes
-  `n8n license:info` for inspecting the installed license state.
+- n8n Source Control entitlement is still **unverified**, not an active Task 9
+  blocker. Re-check it only when runtime access is available or when a changed
+  upstream capability justifies reopening the importer ownership decision. The
+  Server CLI exposes `n8n license:info` for inspecting the installed license
+  state; do not repeat failed cluster-access attempts merely to refresh this
+  fact.
 
 ## Documentation Authority
 
