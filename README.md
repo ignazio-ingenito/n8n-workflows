@@ -11,7 +11,7 @@ cambiano più spesso dei manifest infrastrutturali, e conviene revisarli senza
 mescolarli al codice Kubernetes.
 
 Il comportamento runtime dell'importer non è definito qui: la fonte autorevole è
-`ignazio-ingenito/homelab`, in particolare
+`skunklabs-uk/homelab`, in particolare
 `gitops/apps/n8n-workflows/import-job.yaml` e
 `doc/28-n8n-workflow-gitops-importer.md`.
 
@@ -202,7 +202,7 @@ find workflows -type f -name '*.json' -print0 | xargs -0 -r -n1 jq empty
 Per il comportamento corrente dell'importer usa la fonte Homelab:
 
 ```text
-ignazio-ingenito/homelab
+skunklabs-uk/homelab
   gitops/apps/n8n-workflows/import-job.yaml
   doc/28-n8n-workflow-gitops-importer.md
 ```

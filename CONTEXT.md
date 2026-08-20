@@ -101,8 +101,8 @@ or reset from the n8n UI.
 
 - `README.md` is the current repository-level operating description.
 - Runtime importer behavior is authoritative in
-  `ignazio-ingenito/homelab/gitops/apps/n8n-workflows/import-job.yaml` and its
-  runbook `ignazio-ingenito/homelab/doc/28-n8n-workflow-gitops-importer.md`.
+  `skunklabs-uk/homelab/gitops/apps/n8n-workflows/import-job.yaml` and its
+  runbook `skunklabs-uk/homelab/doc/28-n8n-workflow-gitops-importer.md`.
 - Dated files under `docs/` are historical handoffs unless explicitly promoted
   to an Active source. They must not override current manifests, README, or this
   context.
