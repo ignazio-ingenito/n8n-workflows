@@ -4,11 +4,11 @@
 
 ## Agent OS e lifecycle delle skill
 
-- Prima di analizzare, pianificare, modificare o creare issue o pull request, si DEVE leggere integralmente la versione corrente di [RFC-0001 – Principi fondanti della Software Factory](https://github.com/ignazio-ingenito/agent-os/blob/main/rfcs/RFC-0001-principles.md).
+- Prima di analizzare, pianificare, modificare o creare issue o pull request, si DEVE leggere integralmente la versione corrente di [RFC-0001 – Principi fondanti della Software Factory](https://github.com/skunklabs-uk/agent-os/blob/main/rfcs/RFC-0001-principles.md).
 - Se la fonte non è accessibile, il lavoro DEVE fermarsi.
 - Le regole locali possono restringere la RFC, ma non indebolirla; conflitti o deroghe richiedono l'autorizzazione esplicita dell'utente o di una fonte attiva approvata di autorità superiore.
 - Il contenuto della RFC non DEVE essere duplicato in questo repository.
-- Le skill riusabili hanno una sola sorgente nel [repository codex-skills](https://github.com/ignazio-ingenito/codex-skills). Nei progetti vanno installate tramite symlink con `scripts/install-project.sh`, senza copiare o modificare manualmente le directory installate.
+- Le skill riusabili hanno una sola sorgente nel [repository codex-skills](https://github.com/skunklabs-uk/codex-skills). Nei progetti vanno installate tramite symlink con `scripts/install-project.sh`, senza copiare o modificare manualmente le directory installate.
 
 ## Purpose
 
